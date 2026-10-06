@@ -1,12 +1,13 @@
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
+from django.db import IntegrityError
 from django.http import HttpResponse, Http404
 from django.shortcuts import redirect
 from django.urls import reverse, path
 from django.utils.html import format_html
 
 from core.utils import normalizar_identificador
-from ..forms import LiquidacionEmpleadoInlineForm, LiquidacionEmpleadoInlineFormSet
+from ..forms import LiquidacionEmpleadoInlineForm, LiquidacionEmpleadoInlineFormSet, LiquidacionForm
 from ..models import LiquidacionEmpleado
 from ..models.m_liquidacion import Liquidacion
 from ..services.TxtLsdArca import LsdTxtArcaService
@@ -109,6 +110,7 @@ class LiquidacionEmpleadoInline(admin.TabularInline):
 @admin.register(Liquidacion)
 class LiquidacionAdmin(admin.ModelAdmin):
     inlines = [LiquidacionEmpleadoInline]
+    form = LiquidacionForm
     actions = None
 
     list_display = (
@@ -117,6 +119,7 @@ class LiquidacionAdmin(admin.ModelAdmin):
         "fecha_pago",
         "tipo_envio",
         "tipo_liquidacion",
+        "numero",
         "estado",
     )
 
@@ -126,6 +129,7 @@ class LiquidacionAdmin(admin.ModelAdmin):
         "periodo",
         "tipo_envio",
         "tipo_liquidacion",
+        "numero",
         "fecha_pago",
     )
 
@@ -202,7 +206,7 @@ class LiquidacionAdmin(admin.ModelAdmin):
 
         response = HttpResponse(
             txt,
-            content_type="text/plain",
+            content_type="text/plain; charset=utf-8",
         )
         response["Content-Disposition"] = (
             f'attachment; filename="liquidacion_'

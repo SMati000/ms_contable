@@ -13,14 +13,22 @@
     <div class="bases-imponibles-info">
         <strong>Identificadores de las Bases Imponibles</strong>
 
-        <ul>
-            {% for base in bases_imponibles %}
-                <li>
-                    <code>{{ base.identificador }}</code>
-                    — {{ base.denominacion }}
-                </li>
-            {% endfor %}
-        </ul>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Identificador</th>
+                    <th>Denominación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for base in bases_imponibles %}
+                <tr>
+                    <td><code>{{ base.identificador }}</code></td>
+                    <td>{{ base.denominacion }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
     <button

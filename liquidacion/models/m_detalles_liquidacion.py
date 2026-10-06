@@ -29,7 +29,7 @@ class DetalleLiquidacion(models.Model):
 
     unidades = models.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=5,
         null=False,
         blank=False,
     )

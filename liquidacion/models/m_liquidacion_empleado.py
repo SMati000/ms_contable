@@ -344,10 +344,7 @@ class LiquidacionEmpleado(models.Model):
             )
 
     def save(self, *args, **kwargs):
-        if self.pk is None:
-            self.categoria = self.version_empleado.categoria_laboral.denominacion
-            self.banco_de_cobro = self.version_empleado.banco_de_cobro
-        else:
+        if self.pk:
             if not self.liquidacion.editable():
                 raise ValidationError(
                     "Esta liquidación no se puede modificar."

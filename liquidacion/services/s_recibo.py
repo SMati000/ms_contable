@@ -81,7 +81,7 @@ class ReciboSueldoService:
                 "fecha_ingreso": empleado.fecha_ingreso.strftime("%d/%m/%Y"),
                 "categoria": le.version_empleado.categoria_laboral,
                 "cuil": empleado.cuil_display,
-                "banco": empleado.versiones.ultima().banco_de_cobro,
+                "banco": le.version_empleado.banco_de_cobro,
                 "periodo_pago": f"{liquidacion.fecha_pago.strftime('%d/%m/%Y')}",
             },
 

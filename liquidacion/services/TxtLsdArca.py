@@ -59,7 +59,7 @@ class LsdTxtArcaService:
         for registro in registro06:
             lineas.append(GeneradorRegistro06(registro).generar())
 
-        return "\n".join(lineas)
+        return "\r\n".join(lineas) + "\r\n"
 
     def _cargar_datos(self):  # TODO - desacoplar la carga de datos de los mappers.
         return (

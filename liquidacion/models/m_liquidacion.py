@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 
 from liquidacion.choices import TipoEnvio, TipoLiquidacion
+from liquidacion.validators.v_liquidacion import validar_fechas
 
 
 class Liquidacion(models.Model):
@@ -30,7 +31,6 @@ class Liquidacion(models.Model):
     numero = models.PositiveIntegerField(
         null=True,
         blank=True,
-        editable=False,
         default=None,
     )
 
@@ -130,15 +130,7 @@ class Liquidacion(models.Model):
             )
 
         if self.periodo and self.fecha_pago:
-            if (self.fecha_pago.year != self.periodo.year
-                or self.fecha_pago.month not in (self.periodo.month, self.periodo.month+1)
-            ):
-                raise ValidationError({
-                    "fecha_pago": (
-                        "La fecha de pago debe estar dentro del período "
-                        "de la liquidación, o del siguiente."
-                    )
-                })
+            validar_fechas(periodo=self.periodo, fecha_pago=self.fecha_pago)
 
         if self.tipo_envio == TipoEnvio.RE and self.tipo_liquidacion != "":
             raise ValidationError({
