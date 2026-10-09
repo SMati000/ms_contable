@@ -1,0 +1,26 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Página no encontrada | {{ app_name }}{% endblock %}
+{% block bodyclass %}page-error-body{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/error-pages.css' %}">
+{% endblock %}
+
+{% block content %}
+    <main class="page-error" aria-labelledby="page-error-title">
+        <p class="page-error__code">Error 404</p>
+        <h1 id="page-error-title">No encontramos esta página</h1>
+        <p class="page-error__description">
+            La dirección que abriste no existe o ya no está disponible.
+        </p>
+        <div class="page-error__actions">
+            <a class="button default" href="{% url 'admin:index' %}">Volver al inicio</a>
+            {% if nearest_section_url %}
+                <a class="button" href="{{ nearest_section_url }}">Volver a la sección</a>
+            {% endif %}
+        </div>
+    </main>
+{% endblock %}

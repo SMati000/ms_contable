@@ -13,3 +13,5 @@ urlpatterns = [
     path("", RedirectView.as_view(url="/admin/")),
     path("admin/", admin.site.urls),
 ]
+
+handler404 = "ms_contable.views.page_not_found"

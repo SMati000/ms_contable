@@ -16,13 +16,7 @@
     {{ block.super }}
 
     {% if liquidacion_empleado %}
-        <button
-            type="button"
-            class="button"
-            id="abrir-ayuda"
-        >
-            Ayuda
-        </button>
+        {% include "admin/includes/help_dialog.html" with help_title="Ayuda de liquidación" help_content_template="admin/includes/help/liquidacion_empleado.html" %}
 
         {% if liq_editable %}
         <div class="module">
@@ -51,80 +45,7 @@
         </div>
         {% endif %}
 
-        <dialog  id="modal-ayuda-liquidacion">
-            <h2>Ayuda para liquidar el empleado</h2>
 
-            <h3>Plantilla</h3>
-
-            <p>
-                Aplicar una plantilla agrega los conceptos configurados en ella.
-                Los detalles agregados pueden modificarse.
-            </p>
-
-            <h3>Fórmula</h3>
-            <p>
-                La fórmula puede utilizar números, operadores y referencias a otros conceptos de la liquidación.
-            </p>
-
-            <p>Se pueden expresar en múltiples líneas.</p>
-
-            <p>Para los numeros con decimales se debe utilizar un punto (ej: 10.23), no se aceptan comas.</p>
-
-            <p>Si posa el mouse sobre el nombre de una unidad, se le mostrara la descripcion de la misma.</p>
-
-            <p>Operadores disponibles:</p>
-
-            <ul>
-                <li><code>+</code> suma</li>
-                <li><code>-</code> resta</li>
-                <li><code>*</code> multiplicación</li>
-                <li><code>/</code> división</li>
-                <li><code>**</code> potencia</li>
-                <li><code>()</code> paréntesis</li>
-            </ul>
-
-            <h3>Referenciar otro concepto</h3>
-
-            <p>
-                Cada detalle tiene un identificador visible en el encabezado de su fila.
-                Ese identificador puede utilizarse dentro de una expresión.
-            </p>
-
-            <p>
-                Por ejemplo, si existe el concepto <code>sueldo_basico_17</code>:
-            </p>
-
-            <pre><code>sueldo_basico_17 * 0.11</code></pre>
-
-            <p>Al momento de calcular, se utilizara el valor de "Importe" de los detalles referenciados.</p>
-
-            <p>
-                Lo mismo aplica para las bases imponibles: todos cuentan con su identificador
-                y se pueden referenciar en las fórmulas
-            </p>
-
-            <h3>Cálculos</h3>
-
-            <p><strong>Base</strong>: se calcula a partir de la fórmula base</p>
-
-            <p><strong>Importe</strong>: se calcula como <code>importe = base * unidades</code></p>
-
-            <h3>Guardar y Calcular</h3>
-
-            <p>
-                <strong>Guardar</strong> guarda los datos ingresados como borrador, sin resolver ni validar ningun cálculo.
-            </p>
-
-            <p>
-                <strong>Calcular</strong> valida las referencias, calcula todos los detalles respetando sus
-                dependencias y actualiza la vista para mostrar los resultados.
-                Si no hubo errores, los cambios habrán quedado guardados
-            </p>
-
-            <button type="button" id="cerrar-ayuda">
-                Cerrar
-            </button>
-        </dialog>
     {% endif %}
 {% endblock %}
 

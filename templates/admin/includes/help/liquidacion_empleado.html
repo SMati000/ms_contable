@@ -1,0 +1,26 @@
+<section class="help-dialog__section">
+    <h3>Aplicar una plantilla</h3>
+    <p>
+        Aplicar una plantilla agrega los conceptos configurados en ella. Después podés modificar los detalles
+        agregados.
+    </p>
+</section>
+
+{% include "admin/includes/help/formulas.html" %}
+
+<section class="help-dialog__section">
+    <h3>Calcular importes</h3>
+    <p><strong>Base</strong>: se calcula a partir de la fórmula base.</p>
+    <p><strong>Importe</strong>: se calcula como <code>base × unidades</code>.</p>
+</section>
+
+<section class="help-dialog__section">
+    <h3>Guardar y calcular</h3>
+    <p>
+        <strong>Guardar</strong> conserva lo ingresado como borrador sin validar ni resolver los cálculos.
+    </p>
+    <p>
+        <strong>Calcular</strong> valida las referencias, resuelve los detalles según sus dependencias y actualiza
+        la vista con los resultados. Si no hay errores, guarda los cambios.
+    </p>
+</section>

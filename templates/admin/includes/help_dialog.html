@@ -1,0 +1,39 @@
+<button
+    type="button"
+    class="help-trigger"
+    data-help-target="help-dialog"
+    aria-haspopup="dialog"
+    aria-controls="help-dialog"
+>
+    <span class="help-trigger__icon" aria-hidden="true">?</span>
+    <span>Ayuda</span>
+</button>
+
+<dialog class="help-dialog" id="help-dialog" aria-labelledby="help-dialog-title">
+    <div class="help-dialog__panel">
+        <header class="help-dialog__header">
+            <div>
+                <p class="help-dialog__eyebrow">Guía rápida</p>
+                <h2 id="help-dialog-title">{{ help_title }}</h2>
+            </div>
+            <button
+                type="button"
+                class="help-dialog__icon-close"
+                data-help-close
+                aria-label="Cerrar ayuda"
+            >
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </header>
+
+        <div class="help-dialog__content">
+            {% include help_content_template %}
+        </div>
+
+        <footer class="help-dialog__footer">
+            <button type="button" class="help-dialog__close" data-help-close>
+                Cerrar ayuda
+            </button>
+        </footer>
+    </div>
+</dialog>

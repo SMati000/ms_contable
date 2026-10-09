@@ -4,11 +4,14 @@
 {% block extrastyle %}
     {{ block.super }}
     <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/help-dialog.css' %}">
 {% endblock %}
 
 {% block extrahead %}
     {{ block.super }}
     <link rel="icon" href="{% static 'images/favicon.ico' %}">
+    <script src="{% static 'js/help-dialog.js' %}" defer></script>
+    <script src="{% static 'js/admin-messages.js' %}" defer></script>
 {% endblock %}
 
 {% block footer %}
@@ -18,7 +21,10 @@
         <div class="footer-info">
             <span>{{ app_name }} (v{{ app_version }})</span>
             <span class="footer-separator">·</span>
-            <span>Desarrollador: {{ developer }}</span>
+            <span>
+                Desarrollador:
+                <a href="https://github.com/SMati000/ms_contable" target="_blank" rel="noopener noreferrer">{{ developer }}</a>
+            </span>
         </div>
 
         <div class="footer-help">
