@@ -1,4 +1,12 @@
 .inline-group .inline-related:has(.columnas-custom) {
+    --input-focus-outline: #111;
+}
+
+:root[data-theme="dark"] .inline-group .inline-related:has(.columnas-custom) {
+    --input-focus-outline: #fff;
+}
+
+.inline-group .inline-related:has(.columnas-custom) {
     --cols: 4;              /* campos por fila */
     --campo-alto: 1.875rem; /* alto de inputs y de campos de solo lectura */
     --titulo-seccion: 6.5rem; /* ancho de la columna con "Concepto", "Detalles" */
@@ -194,9 +202,10 @@
 .inline-related .columnas-custom input:focus,
 .inline-related .columnas-custom select:focus,
 .inline-related .columnas-custom textarea:focus {
-    outline: 0;
-    border-color: var(--primary, #417690);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #417690) 25%, transparent);
+    outline: 2px solid var(--input-focus-outline, #111);
+    outline-offset: 1px;
+    border-color: var(--input-focus-outline, #111);
+    box-shadow: none;
 }
 
 /* Selects con links de agregar/editar/ver: el select se queda con el ancho,

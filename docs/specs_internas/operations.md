@@ -47,3 +47,15 @@ python manage.py shell; # importlib
 python manage.py test
 python manage.py collectstatic
 ```
+
+### Instancia aislada para pruebas
+
+Iniciar desde la raíz del proyecto:
+
+```shell
+python -m ms_contable.run_test_instance
+```
+
+La instancia solo se inicia cuando `DEBUG = True` en `ms_contable/settings.py`. Migra `data/db_test.sqlite3` y garantiza la cuenta superusuario `test` con contraseña `test`. El login está en `http://127.0.0.1:8001/`; tras iniciar sesión, el panel se abre en `/test/`. Si ese puerto está ocupado, se puede cambiar con `MS_CONTABLE_TEST_PORT`.
+
+Esta instancia usa una configuración Django y una base SQLite propias, por lo que los cambios que se hagan ahí no se guardan en `data/db.sqlite3`. Para cambiar las credenciales predeterminadas se pueden definir `MS_CONTABLE_TEST_USERNAME` y `MS_CONTABLE_TEST_PASSWORD`.
