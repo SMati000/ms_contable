@@ -16,6 +16,23 @@
     padding: 12px 20px;
 }
 
+body.login {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 16px;
+}
+
+body.login #container {
+    box-sizing: border-box;
+    width: 28em;
+    max-width: 100%;
+    min-width: 0;
+    margin: auto;
+}
+
 .footer-content {
     display: flex;
     flex-direction: column;

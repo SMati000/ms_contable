@@ -8,6 +8,8 @@
 
 {% block extrahead %}
     {{ block.super }}
+    <script src="{% static 'js/admin_theme.js' %}"></script>
+    <script defer src="{% static 'js/admin_login.js' %}"></script>
     <link rel="icon" href="{% static 'images/favicon.ico' %}">
 {% endblock %}
 

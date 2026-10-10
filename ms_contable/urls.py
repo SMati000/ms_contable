@@ -10,6 +10,6 @@ admin.site.index_title = "Panel de Administración"
 
 
 urlpatterns = [
-    path("", RedirectView.as_view(url="/admin/")),
+    path("", RedirectView.as_view(url="/admin/login/")),
     path("admin/", admin.site.urls),
 ]
