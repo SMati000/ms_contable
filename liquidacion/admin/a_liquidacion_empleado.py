@@ -7,6 +7,10 @@ from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.urls import path
 from django.template.loader import render_to_string
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
+from django.utils.text import slugify
+from django.utils import timezone
+from django.utils.http import content_disposition_header
 
 from base_imponible.models import ResultadoBaseImponible
 from plantilla_liquidacion.models import PlantillaLiquidacion
@@ -22,6 +26,8 @@ from ..forms.f_liquidacion_empleado import (
 )
 from ..services.s_expresiones import LiquidacionEmpleadoService
 from ..services.s_recibo import ReciboSueldoService
+from ..services.s_recibo_pdf import convertir_svg_a_pdf
+from ..services.s_recibo_svg import ReciboSueldoSvgRenderer
 
 
 class TramoSituacionRevistaInline(admin.TabularInline):
@@ -351,15 +357,31 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
             return JsonResponse({"liq_previa": None}, encoder=DjangoJSONEncoder)
 
     def recibo_view(self, request, object_id):
-        tipo = request.GET.get("tipo", "original")
+        tipo = "duplicado" if request.GET.get("tipo") == "duplicado" else "original"
 
         datos = ReciboSueldoService(
             LiquidacionEmpleado.objects.get(pk=object_id)
         ).obtener_datos(tipo=tipo)
+        svg = ReciboSueldoSvgRenderer(datos).render()
+
+        if request.GET.get("formato") == "pdf":
+            pdf = convertir_svg_a_pdf(svg)
+            response = HttpResponse(pdf, content_type="application/pdf")
+            entidad = slugify(datos["empresa"]["nombre"]) or "entidad"
+            fecha_hora = timezone.localtime().strftime("%Y-%m-%d_%H-%M-%S")
+            nombre_archivo = f"recibo-{entidad}-{fecha_hora}-{tipo}.pdf"
+            response["Content-Disposition"] = content_disposition_header(
+                True,
+                nombre_archivo,
+            )
+            return response
 
         html = render_to_string(
             "admin/liquidacion/recibo_sueldo.html",
-            datos,
+            {
+                "svg_markup": mark_safe(svg),
+                "pdf_url": f"{request.path}?tipo={tipo}&formato=pdf",
+            },
             request=request,
         )
 

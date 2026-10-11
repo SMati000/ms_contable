@@ -42,7 +42,7 @@ El proyecto no contempla:
 
 * Uso simultáneo por múltiples usuarios.
 * Acceso remoto o funcionamiento como servicio en línea.
-* Autenticación y autorización de usuarios.
+* Gestión de usuarios y permisos por empresa; actualmente se accede con el administrador creado durante la instalación.
 
 ## Requisitos
 

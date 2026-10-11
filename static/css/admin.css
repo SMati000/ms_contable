@@ -31,6 +31,15 @@
     gap: 7px;
 }
 
+.footer-info a {
+    text-decoration: none;
+}
+
+.footer-info a:hover,
+.footer-info a:focus-visible {
+    text-decoration: underline;
+}
+
 .footer-separator {
     color: #aaa;
 }
@@ -53,4 +62,62 @@
 
 .footer-help a:hover {
     text-decoration: underline;
+}
+
+.messagelist > li {
+    transition: opacity 250ms ease, transform 250ms ease;
+}
+
+.messagelist > li.message-dismissed {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+    pointer-events: none;
+}
+
+#content-main .module table tr.model-liquidacion,
+#content-main .module table tr.model-plantillaliquidacion {
+    background: var(--body-bg);
+}
+
+#content-main .app-base_imponible.module + .app-plantilla_liquidacion.module {
+    position: relative;
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+}
+
+#content-main .app-base_imponible.module + .app-plantilla_liquidacion.module::before {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    width: 60%;
+    height: 2px;
+    background: #707070;
+    content: "";
+    transform: translateX(-50%);
+}
+
+html[data-theme="dark"] #content-main .app-base_imponible.module + .app-plantilla_liquidacion.module::before {
+    background: #b3b3b3;
+}
+
+@media (prefers-color-scheme: dark) {
+    html[data-theme="auto"] #content-main .app-base_imponible.module + .app-plantilla_liquidacion.module::before {
+        background: #b3b3b3;
+    }
+}
+
+html[data-theme="light"] .dashboard #content h1 {
+    color: #000;
+}
+
+@media (prefers-color-scheme: light) {
+    html[data-theme="auto"] .dashboard #content h1 {
+        color: #000;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .messagelist > li {
+        transition: none;
+    }
 }

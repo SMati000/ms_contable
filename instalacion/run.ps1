@@ -62,6 +62,52 @@ function Get-AppVersion {
     return $version
 }
 
+function Ensure-DjangoSecretKey {
+    $lines = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in [System.IO.File]::ReadAllLines($EnvFile)) {
+        $lines.Add($line)
+    }
+
+    $keyLineIndex = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^\s*DJANGO_SECRET_KEY\s*=(.*)$') {
+            if (-not [string]::IsNullOrWhiteSpace($Matches[1])) {
+                return
+            }
+
+            $keyLineIndex = $i
+            break
+        }
+    }
+
+    $randomBytes = New-Object byte[] 48
+    $randomGenerator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $randomGenerator.GetBytes($randomBytes)
+    }
+    finally {
+        $randomGenerator.Dispose()
+    }
+
+    $secretKey = [Convert]::ToBase64String($randomBytes)
+    $keyLine = "DJANGO_SECRET_KEY=$secretKey"
+
+    if ($keyLineIndex -ge 0) {
+        $lines[$keyLineIndex] = $keyLine
+    }
+    else {
+        $lines.Add($keyLine)
+    }
+
+    [System.IO.File]::WriteAllLines(
+        $EnvFile,
+        $lines.ToArray(),
+        [System.Text.UTF8Encoding]::new($false)
+    )
+
+    Write-Host "Se genero una clave secreta y se guardo en .env." -ForegroundColor Green
+}
+
 function Ensure-Directories {
     if (-not (Test-Path $DataDir)) {
         New-Item -ItemType Directory -Path $DataDir | Out-Null
@@ -438,6 +484,8 @@ if (-not (Test-Path $EnvFile)) {
     Write-Host "ERROR: No se encontro .env." -ForegroundColor Red
     exit 1
 }
+
+Ensure-DjangoSecretKey
 
 while ($true) {
     try {

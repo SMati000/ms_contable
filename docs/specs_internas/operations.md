@@ -1,5 +1,7 @@
 Por el momento, este proyecto no tiene CI/CD automatizado. Se documentan aca los criterios y pasos que se realizan manualmente.
 
+Para ejecutar comandos Django directamente en el entorno local, definir la variable `DJANGO_SECRET_KEY`. El instalador la configura desde `instalacion/.env` al ejecutar comandos dentro del contenedor.
+
 # Releases
 
 - Validar que pasan exitosamente todos los tests.

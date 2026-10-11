@@ -1,0 +1,28 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block bodyclass %}page-error-body{% endblock %}
+
+{% block title %}Error | MS Contable{% endblock %}
+
+{% block branding %}
+    <div id="site-name"><a href="{% url 'admin:index' %}">MS Contable</a></div>
+{% endblock %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/error-pages.css' %}">
+{% endblock %}
+
+{% block content %}
+    <main class="page-error" aria-labelledby="page-error-title">
+        <p class="page-error__code">{% block error_code %}{% endblock %}</p>
+        <h1 id="page-error-title">{% block error_heading %}{% endblock %}</h1>
+        <p class="page-error__description">{% block error_description %}{% endblock %}</p>
+        <div class="page-error__actions">
+            <a class="button default" href="{% url 'admin:index' %}">Volver al inicio</a>
+        </div>
+    </main>
+{% endblock %}
+
+{% block footer %}MS Contable{% endblock %}

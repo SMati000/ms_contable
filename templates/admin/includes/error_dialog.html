@@ -1,0 +1,54 @@
+<dialog
+    class="help-dialog error-dialog"
+    id="admin-error-dialog"
+    aria-labelledby="admin-error-dialog-title"
+    aria-describedby="admin-error-dialog-description"
+>
+    <div class="help-dialog__panel">
+        <header class="help-dialog__header">
+            <div>
+                <p class="help-dialog__eyebrow">
+                    <svg
+                        class="error-dialog__icon"
+                        viewBox="0 0 20 20"
+                        aria-hidden="true"
+                        focusable="false"
+                    >
+                        <circle cx="10" cy="10" r="8" fill="currentColor" />
+                        <path
+                            d="M10 5.8v5"
+                            fill="none"
+                            stroke="var(--body-bg)"
+                            stroke-linecap="round"
+                            stroke-width="1.8"
+                        />
+                        <circle cx="10" cy="14.2" r="1" fill="var(--body-bg)" />
+                    </svg>
+                    <span>Error</span>
+                </p>
+                <h2 id="admin-error-dialog-title">No se pudo completar la acción</h2>
+            </div>
+            <button
+                type="button"
+                class="help-dialog__icon-close"
+                data-help-close
+                aria-label="Cerrar mensaje de error"
+            >
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </header>
+
+        <div class="help-dialog__content error-dialog__content">
+            <p id="admin-error-dialog-description">
+                Revisá el detalle, corregí lo indicado y volvé a intentarlo.
+            </p>
+            <ul class="error-dialog__details" data-error-details></ul>
+        </div>
+
+        <footer class="help-dialog__footer">
+            <button type="button" class="help-dialog__close" data-help-close>
+                Cerrar
+            </button>
+        </footer>
+    </div>
+</dialog>

@@ -17,6 +17,8 @@
 
 El instalador descargará automáticamente la versión indicada en el archivo `.env`, ejecutará las migraciones de la base de datos y pondrá en funcionamiento la aplicación.
 
+En el primer inicio, el instalador genera una clave secreta aleatoria y la guarda en `.env`. Conservá ese archivo en privado: la clave no debe compartirse ni publicarse.
+
 Una vez finalizada la instalación, acceder desde el navegador a:
 
 ```text
