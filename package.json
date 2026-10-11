@@ -1,0 +1,16 @@
+{
+  "name": "ms-contable",
+  "private": true,
+  "scripts": {
+    "lint:python": "python -m ruff check .",
+    "lint:django": "python manage.py check",
+    "lint:html": "python -m djlint templates concepto/templates empleado/templates grupo_concepto/templates liquidacion/templates plantilla_liquidacion/templates --check --profile=django",
+    "lint:css": "stylelint \"static/**/*.css\" \"*/static/**/*.css\"",
+    "lint": "npm-run-all --continue-on-error lint:python lint:django lint:html lint:css"
+  },
+  "devDependencies": {
+    "npm-run-all2": "9.0.3",
+    "stylelint": "17.16.0",
+    "stylelint-config-standard": "40.0.0"
+  }
+}

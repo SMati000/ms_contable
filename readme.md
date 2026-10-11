@@ -52,6 +52,21 @@ Para ejecutar el proyecto se requiere Docker.
 
 Ver el artefacto de instalación y uso en el [release](https://github.com/SMati000/ms_contable/releases) de la version que desea instalar.
 
+## Lint
+
+Activá el entorno virtual de Python del proyecto (en PowerShell, `.\.venv\Scripts\Activate.ps1`) e instalá las dependencias y herramientas de lint para Python/Django, HTML y CSS:
+
+```bash
+python -m pip install -r requirements-dev.txt
+npm install
+```
+
+Ejecutá todos los chequeos con un solo comando:
+
+```bash
+npm run lint
+```
+
 ## Documentación
 
 Toda la documentación se encuentra dentro del directorio [docs](./docs/):
