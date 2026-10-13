@@ -33,6 +33,17 @@ body.login #container {
     padding: 12px 20px;
 }
 
+body.login #id_username:focus,
+body.login #id_password:focus {
+    outline: 2px solid var(--body-fg, #111);
+    outline-offset: 2px;
+}
+
+:root[data-theme="dark"] body.login #id_username:focus,
+:root[data-theme="dark"] body.login #id_password:focus {
+    outline-color: #fff;
+}
+
 .footer-content {
     display: flex;
     flex-direction: column;
