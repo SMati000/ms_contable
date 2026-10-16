@@ -1,7 +1,7 @@
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseNotAllowed
 from django.shortcuts import redirect
 from django.urls import reverse, path
 from django.utils.html import format_html
@@ -217,10 +217,15 @@ class LiquidacionAdmin(admin.ModelAdmin):
         return response
 
     def rectificar_view(self, request, object_id):
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["POST"])
+
         obj = self.get_object(request, object_id)
 
         if obj is None:
             raise Http404
+        if not self.has_change_permission(request):
+            raise PermissionDenied
 
         obj.rectificar()
 

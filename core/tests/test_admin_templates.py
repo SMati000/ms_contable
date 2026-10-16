@@ -2,10 +2,18 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.template.loader import get_template
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 
+@override_settings(
+    STORAGES={
+        **settings.STORAGES,
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
 class AdminThemeToggleTemplateTests(TestCase):
     def test_custom_theme_toggle_template_is_used(self):
         """
