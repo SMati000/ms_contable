@@ -1,6 +1,8 @@
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
+from django.template.response import TemplateResponse
 from django.utils.html import format_html
-from django.http import JsonResponse
+from django.http import Http404, HttpResponseNotAllowed, JsonResponse
 from django.urls import path, reverse
 from django.db.models import Prefetch
 from django.http import HttpResponseRedirect
@@ -165,6 +167,12 @@ class PlantillaLiquidacionAdmin(admin.ModelAdmin):
 
     change_form_template = "admin/plantilla_liquidacion/change_form.html"
 
+    def get_list_display(self, request):
+        list_display = super().get_list_display(request)
+        if not self.has_add_permission(request):
+            return tuple(column for column in list_display if column != "duplicar")
+        return list_display
+
     class Media:
         js = ("plantilla_liquidacion/admin/detalle_plantilla_liquidacion.js",)
 
@@ -273,14 +281,30 @@ class PlantillaLiquidacionAdmin(admin.ModelAdmin):
         plantilla = self.get_object(request, object_id)
 
         if plantilla is None:
-            self.message_user(
+            raise Http404
+        if not self.has_view_permission(request, plantilla):
+            raise PermissionDenied
+
+        if request.method == "GET":
+            context = {
+                **self.admin_site.each_context(request),
+                "opts": self.model._meta,
+                "title": "Duplicar plantilla",
+                "original": plantilla,
+                "cancel_url": reverse(
+                    "admin:plantilla_liquidacion_plantillaliquidacion_changelist"
+                ),
+            }
+            return TemplateResponse(
                 request,
-                "La plantilla no existe.",
-                level=messages.ERROR,
+                "admin/plantilla_liquidacion/confirm_duplicate.html",
+                context,
             )
-            return HttpResponseRedirect(
-                reverse("admin:plantilla_liquidacion_plantillaliquidacion_changelist")
-            )
+
+        if request.method != "POST":
+            return HttpResponseNotAllowed(["GET", "POST"])
+        if not self.has_add_permission(request):
+            raise PermissionDenied
 
         denominacion = self._denominacion_duplicada(plantilla)
 

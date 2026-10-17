@@ -1,0 +1,4 @@
+-r requirements.txt
+waitress==3.0.2
+tzdata==2026.5
+sqlcipher3==0.6.4

@@ -1,0 +1,44 @@
+{% extends "admin/login.html" %}
+
+{% block title %}Crear primera cuenta | {{ app_name }}{% endblock %}
+{% block bodyclass %}{{ block.super }} first-run{% endblock %}
+
+{% block content %}
+<div id="content-main" class="first-run">
+    <div class="first-run-intro">
+        <p class="first-run-eyebrow">PRIMER INICIO</p>
+        <h1>Bienvenido a {{ app_name }}</h1>
+        <p class="first-run-lead">
+            Parece que todavía no tenés una cuenta para gestionar MS Contable. Creá la cuenta administradora y empezá a cargar empresas, empleados y liquidaciones.
+        </p>
+        <p class="first-run-note">
+            Guardá estos datos: los vas a necesitar cada vez que ingreses. Al crear la cuenta, entrarás directamente al programa.
+        </p>
+    </div>
+
+    <form method="post" id="first-account-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="errornote" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        {% for field in form %}
+            <div class="form-row{% if field.name == 'remember_session' %} remember-session-row{% endif %}">
+                {{ field.errors }}
+                {% if field.name == "remember_session" %}
+                    {{ field }}
+                    {{ field.label_tag }}
+                {% else %}
+                    {{ field.label_tag }}
+                    {{ field }}
+                {% endif %}
+                {% if field.help_text %}
+                    <p class="help">{{ field.help_text }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <div class="submit-row">
+            <input type="submit" class="default" value="Crear cuenta y empezar">
+        </div>
+    </form>
+</div>
+{% endblock %}

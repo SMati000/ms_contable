@@ -46,11 +46,14 @@ El proyecto no contempla:
 
 ## Requisitos
 
-Para ejecutar el proyecto se requiere Docker.
+El proyecto ofrece dos formas de instalación:
+
+* Windows: instalador nativo, sin requerir Docker ni una instalación previa de Python.
+* Windows o Linux: instalación con Docker.
 
 ## Instalación
 
-Ver el artefacto de instalación y uso en el [release](https://github.com/SMati000/ms_contable/releases) de la version que desea instalar.
+Ver los artefactos de instalación y uso en el [release](https://github.com/SMati000/ms_contable/releases) de la versión deseada. El instalador nativo de Windows se genera con las instrucciones de [instalacion/windows](./instalacion/windows/README.md); los scripts actuales de `instalacion` siguen disponibles para Docker.
 
 ## Documentación
 
