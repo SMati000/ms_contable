@@ -1,0 +1,73 @@
+.date-input-segments {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    vertical-align: middle;
+}
+
+.date-input-segments__control {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0 0.25rem;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    color: var(--body-fg);
+    background: var(--body-bg);
+}
+
+.date-input-segments__control:focus-within {
+    border-color: var(--link-fg);
+    box-shadow: 0 0 0 1px var(--link-fg);
+}
+
+.date-input-segments .date-input-segments__part.vTextField {
+    box-sizing: content-box;
+    width: 2.2ch;
+    min-width: 0;
+    margin: 0;
+    padding: 0.3rem 0.1rem;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    text-align: center;
+}
+
+.date-input-segments .date-input-segments__part.vTextField:focus {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+}
+
+.date-input-segments .date-input-segments__part--year.vTextField {
+    width: 4.2ch;
+}
+
+.date-input-segments__separator {
+    padding-inline: 0.15rem;
+    cursor: text;
+    user-select: none;
+}
+
+.date-input-segments .datetimeshortcuts {
+    margin-inline-start: 0.1rem;
+}
+
+.date-input-segments__source {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}

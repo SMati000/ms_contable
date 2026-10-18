@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import ClassVar
 from decimal import Decimal
 
-from core.validators import validar_cuil
 from empresa.choices import TipoEmpleador
-from liquidacion.lsd.utils import validar_datos_obligatorios_dataclass
+from liquidacion.lsd.formatting import FormateadorRegistroLsd
+from liquidacion.lsd.validation import ValidadorRegistroLsd
 
 
 @dataclass
@@ -125,237 +125,171 @@ class GeneradorRegistro04:
         if len(resultado) == 370:
             return resultado
         else:
-            raise Exception(
+            raise ValueError(
                 f"Error al generar Registro 04: longitud inválida.",
                 len(resultado),
                 resultado
             )
 
 
-class FormateadorRegistro04:
-    def __init__(self, datos: DatosRegistro04):
-        self.datos = datos
+class FormateadorRegistro04(FormateadorRegistroLsd):
+    pass
 
-    def bools_formateados(self, valor: bool | None):
-        if valor:
-            return "1"
-        else:
-            return "0"
-
-    def numeros_con_decimales_formateados(self, valor: Decimal, long_entero: int, long_decimal: int):
-        longitud_total = long_entero + long_decimal
-
-        if valor:
-            valor = valor.quantize(
-                Decimal("1." + "0" * long_decimal),
-                rounding="ROUND_DOWN",
-            )
-
-            return f"{valor:0{longitud_total+1}}".replace(".", "")
-        else:
-            return "0" * longitud_total
-
-    def formateado_como_entero(self, valor, long: int):
-        if valor:
-            if isinstance(valor, str):
-                return f"{valor:0>{long}}"
-
-            return f"{valor:0{long}d}"
-        else:
-            return "0" * long
-
-    def formateado_como_string(self, valor, long: int):
-        if valor:
-            if isinstance(valor, str):
-                try:
-                    valor = int(valor)
-                except ValueError:
-                    pass
-
-            return f"{valor:<{long}}"
-        else:
-            return " " * long
-
-class ValidadorRegistro04:
-    def __init__(self, datos: DatosRegistro04):
-        self.datos = datos
-
-    def validar(self):
-        validar_datos_obligatorios_dataclass(self.datos)
+class ValidadorRegistro04(ValidadorRegistroLsd):
+    def validar_campos(self):
         self._validar_cuil()
         self._validar_tipo_empleador()
         self._validar_codigos_longitud()
+        self._validar_booleanos()
         self._validar_numeros_decimales()
         self._validar_dia_inicio_situaciones_revista()
         self._validar_cantidad_hijos()
         self._validar_tiempo_trabajado()
         self._validar_cantidad_adherentes_obra_social()
 
-    def _validar_cuil(self):
-        cuil = self.datos.cuil_trabajador
-
-        if len(cuil) != 11:
-            raise Exception(  # TODO - definir mejor el tipo de excepcion
-                "El CUIL de los trabajadores debe tener 11 dígitos."
-            )
-
-        validar_cuil(cuil)
-
     def _validar_tipo_empleador(self):
         tipo_empleador = self.datos.tipo_empleador
 
-        if tipo_empleador not in TipoEmpleador.values:
-            raise Exception(
+        if not isinstance(tipo_empleador, str) or tipo_empleador not in TipoEmpleador.values:
+            raise ValueError(
                 f"El tipo de empleador {tipo_empleador} no es válido."
             )
 
     def _validar_codigos_longitud(self):
         codigos = [
-            ("Codigo de situacion de revista", self.datos.codigo_situacion_revista, True, 2),
-            ("Codigo de condicion", self.datos.codigo_condicion, True, 2),
-            ("Codigo de actividad", self.datos.codigo_actividad, True, 3),
-            ("Codigo de modalidad de contratacion", self.datos.codigo_modalidad_contratacion, True, 3),
-            ("Codigo de siniestrado", self.datos.codigo_siniestrado, True, 2),
-            ("Codigo de localidad", self.datos.codigo_localidad, True, 2),
-            ("Codigo de situacion de revista 1", self.datos.codigo_situacion_revista_1, False, 2),
-            ("Codigo de obra social", self.datos.codigo_obra_social, True, 6),
-            ("Codigo de situacion de revista 2", self.datos.codigo_situacion_revista_2, False, 2),
-            ("Codigo de situacion de revista 3", self.datos.codigo_situacion_revista_3, False, 2),
+            ("codigo_situacion_revista", "Código de situación de revista", True, 2),
+            ("codigo_condicion", "Código de condición", True, 2),
+            ("codigo_actividad", "Código de actividad", True, 3),
+            ("codigo_modalidad_contratacion", "Código de modalidad de contratación", True, 3),
+            ("codigo_siniestrado", "Código de siniestrado", True, 2),
+            ("codigo_localidad", "Código de localidad", True, 2),
+            ("codigo_situacion_revista_1", "Código de situación de revista 1", False, 2),
+            ("codigo_obra_social", "Código de obra social", True, 6),
+            ("codigo_situacion_revista_2", "Código de situación de revista 2", False, 2),
+            ("codigo_situacion_revista_3", "Código de situación de revista 3", False, 2),
         ]
 
-        for nombre, valor, obligatorio, max_long in codigos:
-            if not valor:
+        for campo, nombre, obligatorio, max_long in codigos:
+            valor = getattr(self.datos, campo)
+            if valor is None or valor == "":
                 if obligatorio:
-                    raise Exception(
+                    raise ValueError(
                         f"{nombre} es obligatorio."
                     )
                 else:
                     continue
 
+            if not isinstance(valor, str):
+                raise ValueError(f"{nombre} debe ser texto.")
+
             if len(valor) > max_long:
-                raise Exception(
+                raise ValueError(
                     f"{nombre} no debe tener una longitud mayor a {max_long} digitos."
                 )
 
+            if not valor.isascii() or not valor.isdigit():
+                raise ValueError(f"{nombre} debe contener únicamente dígitos ASCII.")
+
     def _validar_numeros_decimales(self):
         numeros_decimales = [
-            ("Remuneracion bruta", self.datos.remuneracion_bruta, True, 13, 2),
-            ("Base imponible 1", self.datos.base_imponible_1, True, 13, 2),
-            ("Base imponible 2", self.datos.base_imponible_2, True, 13, 2),
-            ("Base imponible 3", self.datos.base_imponible_3, True, 13, 2),
-            ("Base imponible 4", self.datos.base_imponible_4, True, 13, 2),
-            ("Base imponible 5", self.datos.base_imponible_5, True, 13, 2),
-            ("Base imponible 6", self.datos.base_imponible_6, True, 13, 2),
-            ("Base imponible 7", self.datos.base_imponible_7, True, 13, 2),
-            ("Base imponible 8", self.datos.base_imponible_8, True, 13, 2),
-            ("Base imponible 9", self.datos.base_imponible_9, True, 13, 2),
-            ("Base imponible 10", self.datos.base_imponible_10, True, 13, 2),
-            ("Detracciones", self.datos.detracciones, True, 13, 2),
-            ("Porcentaje de aporte adicional de seguridad social",
-             self.datos.porcentaje_aporte_adicional_seg_social, False, 3, 2),
-            ("Porcentaje de contribucion por tarea diferencial",
-             self.datos.porcentaje_contrib_tarea_diferencial, False, 3, 2),
-            ("Aporte adicional de obra social",
-             self.datos.aporte_adicional_obra_social, False, 13, 2),
-            ("Contribucion adicional de obra social",
-             self.datos.contrib_adicional_obra_social, False, 13, 2),
-            ("Base para el calculo diferencial de aporte de obra social y FSR",
-             self.datos.base_calc_diferencial_aportes_obra_social_fsr, False, 13, 2),
-            ("Base para el calculo diferencial de contribucion de obra social y FSR",
-             self.datos.base_calc_diferencial_contrib_obra_social_fsr, False, 13, 2),
-            ("Base para el calculo diferencial Ley de Riesgos de Trabajo",
-             self.datos.base_calc_diferencial_ley_riesgos_trabajo, False, 13, 2),
-            ("Remuneracion por maternidad ANSeS",
-             self.datos.remuneracion_maternidad_anses, False, 13, 2),
-            ("Base para el calculo diferencial de aporte de seguridad social",
-             self.datos.base_calc_diferencial_aportes_seg_social, False, 13, 2),
-            ("Base para el calculo diferencial de contribucion de seguridad social",
-             self.datos.base_calc_diferencial_contrib_seg_social, False, 13, 2),
+            ("remuneracion_bruta", "Remuneración bruta", True, 13, 2, None),
+            ("base_imponible_1", "Base imponible 1", True, 13, 2, None),
+            ("base_imponible_2", "Base imponible 2", True, 13, 2, None),
+            ("base_imponible_3", "Base imponible 3", True, 13, 2, None),
+            ("base_imponible_4", "Base imponible 4", True, 13, 2, None),
+            ("base_imponible_5", "Base imponible 5", True, 13, 2, None),
+            ("base_imponible_6", "Base imponible 6", True, 13, 2, None),
+            ("base_imponible_7", "Base imponible 7", True, 13, 2, None),
+            ("base_imponible_8", "Base imponible 8", True, 13, 2, None),
+            ("base_imponible_9", "Base imponible 9", True, 13, 2, None),
+            ("base_imponible_10", "Base imponible 10", True, 13, 2, None),
+            ("detracciones", "Detracciones", True, 13, 2, None),
+            ("porcentaje_aporte_adicional_seg_social", "Porcentaje de aporte adicional de seguridad social", False, 3, 2, 100),
+            ("porcentaje_contrib_tarea_diferencial", "Porcentaje de contribución por tarea diferencial", False, 3, 2, 100),
+            ("aporte_adicional_obra_social", "Aporte adicional de obra social", False, 13, 2, None),
+            ("contrib_adicional_obra_social", "Contribución adicional de obra social", False, 13, 2, None),
+            ("base_calc_diferencial_aportes_obra_social_fsr", "Base diferencial de aporte de obra social y FSR", False, 13, 2, None),
+            ("base_calc_diferencial_contrib_obra_social_fsr", "Base diferencial de contribución de obra social y FSR", False, 13, 2, None),
+            ("base_calc_diferencial_ley_riesgos_trabajo", "Base diferencial de Ley de Riesgos del Trabajo", False, 13, 2, None),
+            ("remuneracion_maternidad_anses", "Remuneración por maternidad ANSeS", False, 13, 2, None),
+            ("base_calc_diferencial_aportes_seg_social", "Base diferencial de aporte de seguridad social", False, 13, 2, None),
+            ("base_calc_diferencial_contrib_seg_social", "Base diferencial de contribución de seguridad social", False, 13, 2, None),
         ]
 
-        for nombre, valor, obligatorio, long_entero, long_decimal in numeros_decimales:
-            if valor is None:
-                if obligatorio:
-                    raise Exception(
-                        f"{nombre} es obligatorio."
-                    )
-                else:
-                    continue
+        for campo, nombre, obligatorio, enteros, decimales, maximo in numeros_decimales:
+            valor = self._validar_decimal(
+                nombre,
+                getattr(self.datos, campo),
+                obligatoria=obligatorio,
+                digitos_enteros=enteros,
+                digitos_decimales=decimales,
+                maximo=maximo,
+            )
+            setattr(self.datos, campo, valor)
 
-            if not 0 <= valor < 10**long_entero:
-                raise Exception(
-                    f"{nombre} no es valido. Debe contener, como máximo, {long_entero} digitos para la parte entera "
-                    f"y {long_decimal} decimales."
-                )
+    def _validar_booleanos(self):
+        for campo in ("conyuge", "marca_cct", "marca_scvo", "marca_reduccion"):
+            valor = getattr(self.datos, campo)
+            if valor is not None and not isinstance(valor, bool):
+                raise ValueError(f"{campo.replace('_', ' ').capitalize()} debe ser booleano.")
 
     def _validar_dia_inicio_situaciones_revista(self):
-        dia_inicio_situacion_revista_1 = self.datos.dia_inicio_situacion_revista_1
-        dia_inicio_situacion_revista_2 = self.datos.dia_inicio_situacion_revista_2
-        dia_inicio_situacion_revista_3 = self.datos.dia_inicio_situacion_revista_3
+        for numero in (1, 2, 3):
+            codigo = getattr(self.datos, f"codigo_situacion_revista_{numero}")
+            campo_dia = f"dia_inicio_situacion_revista_{numero}"
+            dia = getattr(self.datos, campo_dia)
+            tiene_codigo = isinstance(codigo, str) and bool(codigo)
 
-        if dia_inicio_situacion_revista_1 and not 0 <= dia_inicio_situacion_revista_1 <= 31:
-            raise Exception(
-                "El dia de inicio de situacion de revista 1 no es valida. Debe contener, como máximo, 2 digitos."
-            )
+            if tiene_codigo != (dia is not None):
+                raise ValueError(
+                    f"El código y el día de inicio de la situación de revista {numero} deben informarse juntos."
+                )
 
-        if dia_inicio_situacion_revista_2 and not 0 <= dia_inicio_situacion_revista_2 <= 31:
-            raise Exception(
-                "El dia de inicio de situacion de revista 2 no es valida. Debe contener, como máximo, 2 digitos."
-            )
-
-        if dia_inicio_situacion_revista_3 and not 0 <= dia_inicio_situacion_revista_3 <= 31:
-            raise Exception(
-                "El dia de inicio de situacion de revista 3 no es valida. Debe contener, como máximo, 2 digitos."
+            self._validar_entero(
+                f"día de inicio de situación de revista {numero}",
+                dia,
+                obligatoria=False,
+                minimo=1,
+                maximo=31,
             )
 
     def _validar_cantidad_hijos(self):
-        cantidad_hijos = self.datos.cantidad_hijos
-
-        if cantidad_hijos and not 0 <= cantidad_hijos <= 99:
-            raise Exception(
-                "La cantidad de hijos no es valida. Debe contener, como máximo, 2 digitos."
-            )
+        self._validar_entero(
+            "cantidad de hijos",
+            self.datos.cantidad_hijos,
+            obligatoria=False,
+            minimo=0,
+            maximo=99,
+        )
 
     def _validar_tiempo_trabajado(self):
-        cantidad_dias_trabajados = self.datos.cantidad_dias_trabajados
-        cantidad_horas_trabajadas = self.datos.cantidad_horas_trabajadas
+        dias = self.datos.cantidad_dias_trabajados
+        horas = self.datos.cantidad_horas_trabajadas
+        self._validar_entero(
+            "cantidad de días trabajados",
+            dias,
+            obligatoria=False,
+            minimo=0,
+            maximo=99,
+        )
+        self._validar_entero(
+            "cantidad de horas trabajadas",
+            horas,
+            obligatoria=False,
+            minimo=0,
+            maximo=999,
+        )
 
-        if cantidad_dias_trabajados:
-            if cantidad_dias_trabajados < 0:
-                raise Exception(
-                    "Cantidad de dias trabajados no puede ser un valor negativo."
-                )
-
-            if cantidad_dias_trabajados > 0 and cantidad_horas_trabajadas and cantidad_horas_trabajadas > 0:
-                raise Exception(
-                    "Cantidad de dias trabajados y cantidad de horas trabajadas son mutuamente excluyentes."
-                )
-
-            if not cantidad_dias_trabajados <= 99:
-                raise Exception(
-                    "La cantidad de dias trabajados no es valida. Debe contener, como máximo, 2 digitos."
-                )
-
-        if cantidad_horas_trabajadas:
-            if cantidad_horas_trabajadas < 0:
-                raise Exception(
-                    "Cantidad de horas trabajados no puede ser un valor negativo."
-                )
-
-            if cantidad_horas_trabajadas > 0 and cantidad_dias_trabajados and cantidad_dias_trabajados > 0:
-                raise Exception(
-                    "Cantidad de dias trabajados y cantidad de horas trabajadas son mutuamente excluyentes."
-                )
-
-            if not cantidad_horas_trabajadas <= 999:
-                raise Exception(
-                    "La cantidad de horas trabajadas no es valida. Debe contener, como máximo, 3 digitos."
-                )
+        if dias and horas:
+            raise ValueError(
+                "La cantidad de días y de horas trabajadas son mutuamente excluyentes."
+            )
 
     def _validar_cantidad_adherentes_obra_social(self):
-        cantidad_adherentes_obra_social = self.datos.cantidad_adherentes_obra_social
-
-        if cantidad_adherentes_obra_social and not 0 <= cantidad_adherentes_obra_social <= 99:
-            raise Exception(
-                "La cantidad de adherentes a la obra social no es valida. Debe contener, como máximo, 2 digitos."
-            )
+        self._validar_entero(
+            "cantidad de adherentes a la obra social",
+            self.datos.cantidad_adherentes_obra_social,
+            obligatoria=False,
+            minimo=0,
+            maximo=99,
+        )

@@ -61,6 +61,35 @@ get_app_version() {
 }
 
 
+ensure_django_secret_key() {
+    if grep -Eq '^[[:space:]]*DJANGO_SECRET_KEY[[:space:]]*=[[:space:]]*[^[:space:]]' "$ENV_FILE"; then
+        return 0
+    fi
+
+    if ! command -v openssl >/dev/null 2>&1; then
+        echo "ERROR: Se necesita OpenSSL para generar la clave secreta." >&2
+        return 1
+    fi
+
+    local secret_key
+    local temp_file
+    secret_key="$(openssl rand -base64 48 | tr -d '\r\n')"
+
+    if [[ -z "$secret_key" ]]; then
+        echo "ERROR: No se pudo generar la clave secreta." >&2
+        return 1
+    fi
+
+    temp_file="$ENV_FILE.tmp"
+    sed -E '/^[[:space:]]*DJANGO_SECRET_KEY[[:space:]]*=/d' "$ENV_FILE" > "$temp_file"
+    printf 'DJANGO_SECRET_KEY=%s\n' "$secret_key" >> "$temp_file"
+    chmod 600 "$temp_file"
+    mv "$temp_file" "$ENV_FILE"
+
+    echo "Se genero una clave secreta y se guardo en .env."
+}
+
+
 get_app_port() {
     if [[ ! -f "$ENV_FILE" ]]; then
         echo "8000"
@@ -141,56 +170,6 @@ wait_for_application() {
 }
 
 
-initialize_superuser() {
-    echo
-    echo "Inicializacion del usuario administrador"
-    echo
-
-    read -r -p "Usuario administrador: " username
-
-    if [[ -z "$username" ]]; then
-        echo "ERROR: El usuario no puede estar vacio."
-        return 1
-    fi
-
-    read -r -s -p "Password: " password
-    echo
-
-    read -r -s -p "Confirmar password: " password_confirmation
-    echo
-
-    if [[ "$password" != "$password_confirmation" ]]; then
-        echo "ERROR: Las passwords no coinciden."
-        return 1
-    fi
-
-    if [[ -z "$password" ]]; then
-        echo "ERROR: La password no puede estar vacia."
-        return 1
-    fi
-
-    echo
-    echo "Creando superusuario..."
-
-    export DJANGO_SUPERUSER_USERNAME="$username"
-    export DJANGO_SUPERUSER_PASSWORD="$password"
-    export DJANGO_SUPERUSER_EMAIL="placeholder@email.com"
-
-    invoke_compose run --rm \
-        -e DJANGO_SUPERUSER_USERNAME \
-        -e DJANGO_SUPERUSER_PASSWORD \
-        -e DJANGO_SUPERUSER_EMAIL \
-        ms_contable \
-        python manage.py createsuperuser --noinput
-
-    unset DJANGO_SUPERUSER_USERNAME
-    unset DJANGO_SUPERUSER_PASSWORD
-    unset DJANGO_SUPERUSER_EMAIL
-
-    echo "Superusuario creado."
-}
-
-
 install_app() {
     ensure_directories
 
@@ -219,8 +198,6 @@ install_app() {
     invoke_compose run --rm \
         ms_contable \
         python manage.py migrate --noinput
-
-    initialize_superuser
 
     echo
     echo "Iniciando aplicacion..."
@@ -411,6 +388,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
     echo "ERROR: No se encontro .env."
     exit 1
 fi
+
+ensure_django_secret_key || exit 1
 
 
 while true; do

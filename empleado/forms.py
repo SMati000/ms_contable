@@ -1,5 +1,6 @@
 from datetime import date
 from django import forms
+from django.core.exceptions import ValidationError
 from categoria_laboral.models import CategoriaLaboral
 from .choices import FormaPago
 from .models import Empleado, VersionEmpleado
@@ -163,11 +164,14 @@ class EmpleadoAdminForm(forms.ModelForm):
             empresa_id = self.data.get("empresa")
 
             if empresa_id:
-                self.fields["categoria_laboral"].queryset = (
-                    CategoriaLaboral.objects.filter(
-                        empresa_id=empresa_id
+                try:
+                    empresa = self.fields["empresa"].clean(empresa_id)
+                except ValidationError:
+                    pass
+                else:
+                    self.fields["categoria_laboral"].queryset = (
+                        CategoriaLaboral.objects.filter(empresa=empresa)
                     )
-                )
 
             self.initial.update({
                 "cantidad_hijos": 0,

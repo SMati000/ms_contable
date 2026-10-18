@@ -1,26 +1,63 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
+{% load i18n static %}
 
 {% block extrastyle %}
     {{ block.super }}
     <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'css/form-errors.css' %}">
+    <link rel="stylesheet" href="{% static 'css/date-input-segments.css' %}">
+    <link rel="stylesheet" href="{% static 'css/help-dialog.css' %}">
 {% endblock %}
 
 {% block extrahead %}
     {{ block.super }}
     <script src="{% static 'js/admin_theme.js' %}"></script>
     <script defer src="{% static 'js/admin_login.js' %}"></script>
+    <script defer src="{% static 'js/calendar-wheel-navigation.js' %}"></script>
+    <script defer src="{% static 'js/admin-sidebar-positioning.js' %}"></script>
+    <script defer src="{% static 'js/date-input-mask.js' %}"></script>
     <link rel="icon" href="{% static 'images/favicon.ico' %}">
+    <script src="{% static 'js/help-dialog.js' %}" defer></script>
+    <script src="{% static 'js/admin-messages.js' %}" defer></script>
+    <script src="{% static 'js/form-errors.js' %}" defer></script>
+{% endblock %}
+
+{% block welcome-msg %}
+    <span class="user-welcome">Bienvenido/a, <strong>{{ user.get_username }}</strong></span>
+{% endblock %}
+
+{% block userlinks %}
+    {% if request.resolver_match.namespace == "admin" and request.resolver_match.url_name != "index" %}
+        <a href="{% url 'admin:index' %}">Volver al inicio</a> /
+    {% endif %}
+    {% if user.is_active and user.is_staff %}
+        {% url 'django-admindocs-docroot' as docsroot %}
+        {% if docsroot %}
+            <a href="{{ docsroot }}">{% translate 'Documentation' %}</a> /
+        {% endif %}
+    {% endif %}
+    {% if user.has_usable_password %}
+        <a href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a> /
+    {% endif %}
+    <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+        {% csrf_token %}
+        <button type="submit">{% translate 'Log out' %}</button>
+    </form>
+    {% include "admin/color_theme_toggle.html" %}
 {% endblock %}
 
 {% block footer %}
+{% include "admin/includes/error_dialog.html" %}
 <div id="footer">
     <div class="footer-content">
 
         <div class="footer-info">
             <span>{{ app_name }} (v{{ app_version }})</span>
             <span class="footer-separator">·</span>
-            <span>Desarrollador: {{ developer }}</span>
+            <span>
+                Desarrollador:
+                <a href="https://github.com/SMati000/ms_contable" target="_blank" rel="noopener noreferrer">{{ developer }}</a>
+            </span>
         </div>
 
         <div class="footer-help">

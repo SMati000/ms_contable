@@ -3,6 +3,9 @@ from concepto.choices import Categoria, Tipo
 
 
 def validar_tipo_categoria(tipo, categoria):
+    if not tipo or not categoria:
+        return
+
     if tipo == Tipo.CONTRIBUCION:
         if categoria != Categoria.EMPLEADOR:
             raise ValidationError({

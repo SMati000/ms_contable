@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import ClassVar
 from decimal import Decimal
 from datetime import date
-from core.validators import validar_cuil
-from liquidacion.lsd.utils import validar_datos_obligatorios_dataclass
+from liquidacion.lsd.formatting import FormateadorRegistroLsd
+from liquidacion.lsd.validation import ValidadorRegistroLsd
 
 
 @dataclass
@@ -44,56 +44,47 @@ class GeneradorRegistro05:
 
         if len(resultado) == 65:
             return resultado
-        else:
-            raise Exception(
-                f"Error al generar Registro 05: longitud inválida.",
-                len(resultado),
-                resultado
-            )
+
+        raise ValueError(
+            "Error al generar Registro 05: longitud inválida. "
+            f"Longitud generada: {len(resultado)} caracteres."
+        )
 
 
-class FormateadorRegistro05:
-    def __init__(self, datos: DatosRegistro05):
-        self.datos = datos
-
+class FormateadorRegistro05(FormateadorRegistroLsd):
     def categoria_profesional_formateada(self):
-        categoria_profesional = self.datos.categoria_profesional
-
-        if categoria_profesional:
-            return f"{categoria_profesional:0>6}"
-        else:
-            return "0" * 6
+        return self.texto_alineado(
+            self.datos.categoria_profesional,
+            6,
+            relleno="0",
+            alineacion=">",
+        )
 
     def puesto_desempeniado_formateado(self):
-        puesto_desempeniado = self.datos.puesto_desempeniado
-
-        if puesto_desempeniado:
-            return f"{puesto_desempeniado:0>4}"
-        else:
-            return "0" * 4
+        return self.texto_alineado(
+            self.datos.puesto_desempeniado,
+            4,
+            relleno="0",
+            alineacion=">",
+        )
 
     def fecha_formateada(self, fecha: date):
-        if fecha:
-            return fecha.strftime("%Y%m%d")
-        else:
-            return "0" * 8
+        return super().fecha_formateada(
+            fecha,
+            valor_vacio="0" * 8,
+        )
 
     def remuneracion_formateada(self):
-        remuneracion = self.datos.remuneracion
+        return self.numeros_con_decimales_formateados(
+            self.datos.remuneracion,
+            long_entero=13,
+            long_decimal=2,
+            longitud_cero=15,
+        )
 
-        if remuneracion:
-            remuneracion = remuneracion.quantize(Decimal("0.01"), rounding="ROUND_DOWN")
-            return f"{remuneracion:016}".replace(".", "")  # :016 considerando todavia el punnto decimal
-        else:
-            return "0" * 15
 
-
-class ValidadorRegistro05:
-    def __init__(self, datos: DatosRegistro05):
-        self.datos = datos
-
-    def validar(self):
-        validar_datos_obligatorios_dataclass(self.datos)
+class ValidadorRegistro05(ValidadorRegistroLsd):
+    def validar_campos(self):
         self._validar_cuil()
         self._validar_categoria_profesional()
         self._validar_puesto_desempeniado()
@@ -101,56 +92,54 @@ class ValidadorRegistro05:
         self._validar_remuneracion()
 
     def _validar_cuil(self):
-        cuil_trab = self.datos.cuil_trabajador
+        super()._validar_cuil()
         cuit_empl = self.datos.cuit_empleador
 
-        if len(cuil_trab) != 11:
-            raise Exception(  # TODO - definir mejor el tipo de excepcion
-                "El CUIL de los trabajadores debe tener 11 dígitos."
-            )
-
-        if len(cuit_empl) != 11:
-            raise Exception(
-                "El CUIT del empleador debe tener 11 dígitos."
-            )
-
-        validar_cuil(cuil_trab)
-        validar_cuil(cuit_empl)
+        self._validar_identificador_fiscal("CUIT del empleador", cuit_empl)
 
     def _validar_categoria_profesional(self):
         categoria_profesional = self.datos.categoria_profesional
 
-        max_long = 6
-        if len(categoria_profesional) > max_long:
-            raise Exception(
-                f"La categoría profesional no debe tener una longitud mayor a {max_long} digitos."
+        if (
+            not isinstance(categoria_profesional, str)
+            or not categoria_profesional.isascii()
+            or not categoria_profesional.isdigit()
+            or len(categoria_profesional) > 6
+        ):
+            raise ValueError(
+                "La categoría profesional debe contener hasta 6 dígitos."
             )
 
     def _validar_puesto_desempeniado(self):
         puesto_desempeniado = self.datos.puesto_desempeniado
 
-        max_long = 4
-        if len(puesto_desempeniado) > max_long:
-            raise Exception(
-                f"El puesto desempeñado no debe tener una longitud mayor a {max_long} digitos."
+        if (
+            not isinstance(puesto_desempeniado, str)
+            or not puesto_desempeniado.isascii()
+            or not puesto_desempeniado.isdigit()
+            or len(puesto_desempeniado) > 4
+        ):
+            raise ValueError(
+                "El puesto desempeñado debe contener hasta 4 dígitos."
             )
 
     def _validar_fechas(self):
         fecha_ingreso = self.datos.fecha_ingreso
         fecha_egreso = self.datos.fecha_egreso
 
+        self._validar_fecha("fecha de ingreso", fecha_ingreso, obligatoria=True)
+        self._validar_fecha("fecha de egreso", fecha_egreso, obligatoria=True)
+
         if fecha_egreso < fecha_ingreso:
-            raise Exception(
+            raise ValueError(
                 "La fecha de ingreso no puede ser posterior a la de egreso."
             )
 
     def _validar_remuneracion(self):
-        remuneracion = self.datos.remuneracion
-
-        if not remuneracion:
-            return
-
-        if not 0 <= remuneracion < 10000000000000:
-            raise Exception(
-                "La remuneracion no es valida. Debe contener, como máximo, 13 digitos para la parte entera y 2 decimales."
-            )
+        self.datos.remuneracion = self._validar_decimal(
+            "remuneración",
+            self.datos.remuneracion,
+            obligatoria=True,
+            digitos_enteros=13,
+            digitos_decimales=2,
+        )

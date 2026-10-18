@@ -2,9 +2,19 @@ from dataclasses import dataclass
 from typing import ClassVar
 from datetime import date
 from decimal import Decimal
-from core.validators import validar_cuil
 from liquidacion.choices import UnidadesLsd, DebitoCredito
-from liquidacion.lsd.utils import validar_datos_obligatorios_dataclass
+from liquidacion.lsd.formatting import FormateadorRegistroLsd
+from liquidacion.lsd.validation import ValidadorRegistroLsd
+
+
+CODIGOS_ARCA_QUE_REQUIEREN_CANTIDAD = {
+    "123000",
+    "130000",
+    "130001",
+    "130002",
+    "130003",
+    "150000",
+}
 
 
 @dataclass
@@ -52,66 +62,48 @@ class GeneradorRegistro03:
         if len(resultado) == 51:
             return resultado
         else:
-            raise Exception(
+            raise ValueError(
                 "Error al generar Registro 03: longitud inválida.",
                 len(resultado),
                 resultado
             )
 
 
-class FormateadorRegistro03:
-    def __init__(self, datos: DatosRegistro03):
-        self.datos = datos
-
+class FormateadorRegistro03(FormateadorRegistroLsd):
     def codigo_arca_concepto_formateado(self):
-        codigo_arca_concepto = self.datos.codigo_arca_concepto
-
-        if codigo_arca_concepto:
-            return f"{codigo_arca_concepto:<10}"
-        else:
-            return " " * 10
+        return self.texto_alineado(
+            self.datos.codigo_arca_concepto,
+            10,
+        )
 
     def cantidad_formateada(self):
-        cantidad = self.datos.cantidad
-
-        if cantidad:
-            cantidad = cantidad.quantize(Decimal("0.01"), rounding="ROUND_DOWN")
-            return f"{cantidad:06}".replace(".", "")  # :06 considerando todavia el punto decimal
-        else:
-            return "0" * 5
+        return self.numeros_con_decimales_formateados(
+            self.datos.cantidad,
+            long_entero=3,
+            long_decimal=2,
+            longitud_cero=5,
+        )
 
     def unidades_formateada(self):
-        unidades = self.datos.unidades
-
-        if unidades:
-            return unidades
-        else:
-            return " "
+        return self.texto_alineado(self.datos.unidades, 1)
 
     def importe_formateado(self):
-        importe = self.datos.importe
-
-        if importe:
-            importe = importe.quantize(Decimal("0.01"), rounding="ROUND_DOWN")
-            return f"{importe:016}".replace(".", "")  # :016 considerando todavia el punnto decimal
-        else:
-            return "0" * 15
+        return self.numeros_con_decimales_formateados(
+            self.datos.importe,
+            long_entero=13,
+            long_decimal=2,
+        )
 
     def periodo_ajuste_retractivo_formateado(self):
-        periodo_ajuste_retractivo = self.datos.periodo_ajuste_retractivo
+        return self.fecha_formateada(
+            self.datos.periodo_ajuste_retractivo,
+            "%Y%m",
+            " " * 6,
+        )
 
-        if periodo_ajuste_retractivo:
-            return periodo_ajuste_retractivo.strftime("%Y%m")
-        else:
-            return " " * 6
 
-
-class ValidadorRegistro03:
-    def __init__(self, datos: DatosRegistro03):
-        self.datos = datos
-
-    def validar(self):
-        validar_datos_obligatorios_dataclass(self.datos)
+class ValidadorRegistro03(ValidadorRegistroLsd):
+    def validar_campos(self):
         self._validar_cuil()
         self._validar_codigo_arca_concepto()
         self._validar_cantidad()
@@ -119,62 +111,60 @@ class ValidadorRegistro03:
         self._validar_importe()
         self._validar_debito_credito()
 
-    def _validar_cuil(self):
-        cuil = self.datos.cuil_trabajador
-
-        if len(cuil) != 11:
-            raise Exception(  # TODO - definir mejor el tipo de excepcion
-                "El CUIL de los trabajadores debe tener 11 dígitos."
-            )
-
-        validar_cuil(cuil)
-
     def _validar_codigo_arca_concepto(self):
         codigo_arca_concepto = self.datos.codigo_arca_concepto
 
+        if not isinstance(codigo_arca_concepto, str) or not codigo_arca_concepto:
+            raise ValueError("El código ARCA del concepto es obligatorio.")
+
         max_long = 10
         if len(codigo_arca_concepto) > max_long:
-            raise Exception(
+            raise ValueError(
                 f"El codigo del concepto no debe tener una longitud mayor a {max_long} digitos."
             )
 
     def _validar_cantidad(self):
-        cantidad = self.datos.cantidad
+        cantidad = self._validar_decimal(
+            "cantidad",
+            self.datos.cantidad,
+            obligatoria=False,
+            digitos_enteros=3,
+            digitos_decimales=2,
+        )
+        self.datos.cantidad = cantidad
 
-        if not cantidad:
+        if cantidad is None:
+            if self.datos.codigo_arca_concepto in CODIGOS_ARCA_QUE_REQUIEREN_CANTIDAD:
+                raise ValueError(
+                    "La cantidad es obligatoria para este código ARCA."
+                )
             return
-
-        if not 0 <= cantidad < 1000:
-            raise Exception(
-                "La cantidad no es valida. Debe contener, como máximo, 3 digitos para la parte entera y 2 decimales."
-            )
 
     def _validar_unidades(self):
         unidades = self.datos.unidades
 
-        if not unidades:
+        if unidades is None or unidades == "":
             return
 
-        if unidades not in UnidadesLsd.values:
-            raise Exception(
+        if not isinstance(unidades, str) or unidades not in UnidadesLsd.values:
+            raise ValueError(
                 f"La unidad {unidades} no es válida."
             )
 
     def _validar_importe(self):
-        importe = self.datos.importe
-
-        if not importe:
-            return
-
-        if not 0 <= importe < 10000000000000:
-            raise Exception(
-                "El importe no es valido. Debe contener, como máximo, 13 digitos para la parte entera y 2 decimales."
-            )
+        importe = self._validar_decimal(
+            "importe",
+            self.datos.importe,
+            obligatoria=False,
+            digitos_enteros=13,
+            digitos_decimales=2,
+        )
+        self.datos.importe = importe
 
     def _validar_debito_credito(self):
         debito_credito = self.datos.debito_credito
 
         if debito_credito not in DebitoCredito.values:
-            raise Exception(
+            raise ValueError(
                 f"El valor {debito_credito} no es válido."
             )

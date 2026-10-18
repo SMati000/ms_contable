@@ -114,7 +114,6 @@ def crear_version_empleado(
         codigo_obra_social=codigo_obra_social,
     )
 
-    version.full_clean()
     version.save()
 
     return version

@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    function sanitize(value, maxDecimals) {
+    function sanitize(value) {
         // Treat comma and period as decimal separators.
         value = value.replace(/,/g, ".");
 
@@ -19,11 +19,9 @@
                 value.slice(0, separator + 1) +
                 value.slice(separator + 1).replace(/\./g, "");
 
-            // Limit the fractional part.
+            // Keep one normalized decimal separator.
             const integerPart = value.slice(0, separator);
-            const decimalPart = value
-                .slice(separator + 1)
-                .slice(0, maxDecimals);
+            const decimalPart = value.slice(separator + 1);
 
             value = integerPart + "." + decimalPart;
         }
@@ -44,9 +42,19 @@
         const original = input.value;
 
         // Sanitize the value and the text preceding each cursor position.
-        const cleaned = sanitize(original, maxDecimals);
-        const newStart = sanitize(original.slice(0, start), maxDecimals).length;
-        const newEnd = sanitize(original.slice(0, end), maxDecimals).length;
+        const cleaned = sanitize(original);
+        const newStart = sanitize(original.slice(0, start)).length;
+        const newEnd = sanitize(original.slice(0, end)).length;
+        const separator = cleaned.indexOf(".");
+        const fractionalDigits = separator === -1
+            ? 0
+            : cleaned.length - separator - 1;
+
+        input.setCustomValidity(
+            fractionalDigits > maxDecimals
+                ? `Usá como máximo ${maxDecimals} decimales.`
+                : ""
+        );
 
         if (cleaned !== original) {
             input.value = cleaned;

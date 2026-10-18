@@ -1,9 +1,14 @@
 from django.db import models
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from concepto.models import VersionConcepto
+from concepto.validation import validar_unidades
+from core.models import ValidatingModel
+from liquidacion.validators.v_detalles import validar_debito_credito
+from liquidacion.validators.v_expresiones import validar_formula
 from liquidacion.choices import UnidadesLsd, DebitoCredito
 
 
-class PlantillaLiquidacion(models.Model):
+class PlantillaLiquidacion(ValidatingModel):
     id = models.BigAutoField(
         primary_key=True,
     )
@@ -35,7 +40,7 @@ class PlantillaLiquidacion(models.Model):
         return f"{self.denominacion}"
 
 
-class DetallePlantillaLiquidacion(models.Model):
+class DetallePlantillaLiquidacion(ValidatingModel):
     id = models.BigAutoField(
         primary_key=True,
     )
@@ -107,14 +112,47 @@ class DetallePlantillaLiquidacion(models.Model):
     def clean(self):
         super().clean()
 
+        try:
+            plantilla = self.plantilla
+        except ObjectDoesNotExist:
+            plantilla = None
+
+        try:
+            concepto = self.concepto
+        except ObjectDoesNotExist:
+            concepto = None
+
         if (
-            self.plantilla_id
-            and self.concepto_id
-            and self.plantilla.empresa_id != self.concepto.empresa_id
+            plantilla
+            and concepto
+            and plantilla.empresa_id != concepto.empresa_id
         ):
             raise ValidationError(
                 "El concepto asociado no pertenece a la empresa de la plantilla."
             )
 
+        if concepto:
+            version = concepto.versiones.ultima()
+            if version is None:
+                raise ValidationError({
+                    "concepto": "El concepto no tiene una versión vigente."
+                })
+
+            validar_unidades(version.unidad, self.unidades)
+            validar_debito_credito(version.codigo_arca, self.debito_credito)
+
+        if self.formula_base:
+            validar_formula(self.formula_base)
+
     def __str__(self):
-        return f"identificador: {self.concepto.versiones.ultima().identificador_concepto}"
+        version = (
+            VersionConcepto.todos
+            .filter(concepto_id=self.concepto_id)
+            .ultima()
+        )
+        identificador = (
+            version.identificador_concepto
+            if version
+            else f"concepto {self.concepto_id}"
+        )
+        return f"identificador: {identificador}"

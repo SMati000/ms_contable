@@ -51,18 +51,6 @@ class DetalleLiquidacionForm(forms.ModelForm):
             if self.instance.concepto.codigo_arca:
                 self.fields["debito_credito"].required = True
 
-    def clean_debito_credito(self):
-        concepto = self.cleaned_data["concepto"]
-        debito_credito = self.cleaned_data["debito_credito"]
-
-        if concepto.codigo_arca and not debito_credito:
-            raise forms.ValidationError(
-                "Este campo es obligatorio para conceptos que tienen asociado un código de ARCA."
-            )
-
-        return debito_credito
-
-
 class DetalleLiquidacionFormSet(BaseInlineFormSet):
     def add_fields(self, form, index):
         super().add_fields(form, index)

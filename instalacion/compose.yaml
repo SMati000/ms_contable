@@ -1,6 +1,8 @@
 services:
   ms_contable:
     image: matiasschulz/ms_contable:${APP_VERSION}
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
     ports:
       - "${PORT}:8000"
     volumes:

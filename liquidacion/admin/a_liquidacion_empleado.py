@@ -1,17 +1,20 @@
-from django.contrib import admin, messages
-from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Q
+from django.contrib import admin
 from django.urls import reverse
 from django.shortcuts import get_object_or_404
-from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponse
 from django.urls import path
 from django.template.loader import render_to_string
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
+from django.utils.text import slugify
+from django.utils import timezone
+from django.utils.http import content_disposition_header
 
 from base_imponible.models import ResultadoBaseImponible
 from plantilla_liquidacion.models import PlantillaLiquidacion
 from plantilla_liquidacion.services import PlantillaLiquidacionService
 from .a_detalles_liquidacion import DetalleLiquidacionInline
+from .v_liquidacion_previa import liquidacion_previa_view
 from ..models import TramoSituacionRevista, Liquidacion
 from ..models.m_liquidacion_empleado import LiquidacionEmpleado
 from ..models.m_detalles_liquidacion import DetalleLiquidacion
@@ -20,8 +23,10 @@ from ..forms.f_liquidacion_empleado import (
     ResultadoBaseImponibleInlineForm,
     TramoSituacionRevistaInlineForm
 )
-from ..services.s_expresiones import LiquidacionEmpleadoService
 from ..services.s_recibo import ReciboSueldoService
+from ..services.s_recibo_pdf import convertir_svg_a_pdf
+from ..services.s_recibo_svg import ReciboSueldoSvgRenderer
+from .a_liquidacion_empleado_ajax import LiquidacionEmpleadoAjaxMixin
 
 
 class TramoSituacionRevistaInline(admin.TabularInline):
@@ -105,7 +110,7 @@ class ResultadoBaseImponibleInline(admin.TabularInline):
 
 
 @admin.register(LiquidacionEmpleado)
-class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
+class LiquidacionEmpleadoAdmin(LiquidacionEmpleadoAjaxMixin, admin.ModelAdmin):
     inlines = [
         TramoSituacionRevistaInline,
         ResultadoBaseImponibleInline,
@@ -115,6 +120,7 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
+            "classes": ("liquidacion-wizard-empleado",),
             "fields": (
                 "liquidacion",
                 "empleado_display",
@@ -122,7 +128,7 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
             ),
         }),
         ("Datos Adicionales", {
-            "classes": ("columnas-custom-2",),
+            "classes": ("columnas-custom-2", "liquidacion-wizard-complementarios"),
             "fields": (
                 ("fecha_rubrica", "cantidad_dias_proporcionar_tope", "unidad_tiempo_trabajado", "tiempo_trabajado"),
                 ("codigo_situacion", "codigo_condicion", "codigo_actividad", "codigo_modalidad_contratacion",),
@@ -134,13 +140,13 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
             )
         }),
         ("Observaciones", {
-            "classes": ("columnas-custom-2",),
+            "classes": ("columnas-custom-2", "liquidacion-wizard-observaciones"),
             "fields": (
                 ("observaciones_recibo", "observaciones_lsd",),
             ),
         }),
         ("Totales de liquidación", {
-            "classes": ("columnas-custom-2",),
+            "classes": ("columnas-custom-2", "liquidacion-wizard-totales"),
             "fields": (
                 ("remunerativo_display", "bruto_display", "descuentos_display",),
                 ("no_remunerativo_display", "neto_display", "contribuciones_display",),
@@ -214,7 +220,13 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
         return False
 
     class Media:
-        js = ("liquidacion/admin/detalle_liquidacion_empleado.js",)
+        js = (
+            "liquidacion/admin/detalle_liquidacion_empleado.js",
+            "liquidacion/admin/liquidacion_previa.js",
+            "liquidacion/admin/liquidacion_empleado_wizard.js",
+            "liquidacion/admin/liquidacion_empleado_resultados.js",
+            "liquidacion/admin/liquidacion_empleado_plantilla.js",
+        )
 
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None, ):
         extra_context = extra_context or {}
@@ -222,15 +234,13 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
         if object_id:
             obj = self.get_object(request, object_id)
 
-            extra_context["liq_editable"] = obj is None or obj.liquidacion.editable()
-
-            recibo_url = reverse(
-                "admin:liquidacionempleado_recibo",
-                args=[obj.pk],
-            )
-
             if obj:
+                extra_context["liq_editable"] = obj.liquidacion.editable()
                 extra_context["liquidacion_empleado"] = True
+                recibo_url = reverse(
+                    "admin:liquidacionempleado_recibo",
+                    args=[obj.pk],
+                )
                 extra_context["plantillas"] = (
                     PlantillaLiquidacion.objects
                     .filter(empresa=obj.liquidacion.empresa)
@@ -252,7 +262,7 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
         custom = [
             path(
                 "<int:liquidacion_empleado_id>/previa/",
-                self.admin_site.admin_view(self.liq_previa_view),
+                self.admin_site.admin_view(liquidacion_previa_view),
                 name="liquidacionempleado_previa",
             ),
             path(
@@ -274,92 +284,32 @@ class LiquidacionEmpleadoAdmin(admin.ModelAdmin):
 
         return custom + urls
 
-    def response_change(self, request, obj):
-        if "_calcular" in request.POST:
-            try:
-                LiquidacionEmpleadoService(obj).liquidar()
-                self.message_user(
-                    request,
-                    "Liquidación calculada correctamente.",
-                    messages.SUCCESS,
-                )
-            except Exception as e:
-                self.message_user(request, str(e), messages.ERROR, )
-
-            return HttpResponseRedirect(request.path)
-
-        return super().response_change(request, obj)
-
-    def liq_previa_view(self, request, liquidacion_empleado_id):
-        actual = LiquidacionEmpleado.objects.get(pk=liquidacion_empleado_id)
-
-        liq_previa = (
-            LiquidacionEmpleado.objects
-            .filter(
-                empleado=actual.empleado,
-                liquidacion__empresa=actual.liquidacion.empresa,
-            )
-            .filter(
-                Q(  # periodo es menor al período actual
-                    liquidacion__periodo__lt=actual.liquidacion.periodo,
-                )
-                | Q(  # tiene el mismo periodo, pero un numero menor
-                    liquidacion__periodo=actual.liquidacion.periodo,
-                    liquidacion__numero__lt=actual.liquidacion.numero,
-                )
-            )
-            .order_by(
-                "-liquidacion__periodo",
-                "-liquidacion__numero",
-            )
-            .first()
-        )
-
-        if liq_previa:
-            datos = {
-                "cantidad_dias_proporcionar_tope": liq_previa.cantidad_dias_proporcionar_tope,
-                "unidad_tiempo_trabajado": liq_previa.unidad_tiempo_trabajado,
-                "tiempo_trabajado": liq_previa.tiempo_trabajado,
-
-                "codigo_situacion": liq_previa.codigo_situacion,
-                "codigo_condicion": liq_previa.codigo_condicion,
-                "codigo_actividad": liq_previa.codigo_actividad,
-                "codigo_modalidad_contratacion": liq_previa.codigo_modalidad_contratacion,
-                "codigo_siniestrado": liq_previa.codigo_siniestrado,
-                "codigo_localidad": liq_previa.codigo_localidad,
-
-                "porcentaje_aporte_adicional_ss": liq_previa.porcentaje_aporte_adicional_ss,
-                "porcentaje_contrib_tarea_diferencial": liq_previa.porcentaje_contrib_tarea_diferencial,
-                "remuneracion_maternidad_anses": liq_previa.remuneracion_maternidad_anses,
-
-                "cantidad_adherentes_obra_social": liq_previa.cantidad_adherentes_obra_social,
-                "aporte_adicional_obra_social": liq_previa.aporte_adicional_obra_social,
-                "contrib_adicional_obra_social": liq_previa.contrib_adicional_obra_social,
-
-                "base_calc_diferencial_aportes_obra_social_fsr": liq_previa.base_calc_diferencial_aportes_obra_social_fsr,
-                "base_calc_diferencial_contrib_obra_social_fsr": liq_previa.base_calc_diferencial_contrib_obra_social_fsr,
-                "base_calc_diferencial_ley_riesgos_trabajo": liq_previa.base_calc_diferencial_ley_riesgos_trabajo,
-                "base_calc_diferencial_aportes_seg_social": liq_previa.base_calc_diferencial_aportes_seg_social,
-                "base_calc_diferencial_contrib_seg_social": liq_previa.base_calc_diferencial_contrib_seg_social,
-
-                "observaciones_recibo": liq_previa.observaciones_recibo,
-                "observaciones_lsd": liq_previa.observaciones_lsd,
-            }
-
-            return JsonResponse({"liq_previa": datos})
-        else:
-            return JsonResponse({"liq_previa": None}, encoder=DjangoJSONEncoder)
-
     def recibo_view(self, request, object_id):
-        tipo = request.GET.get("tipo", "original")
+        tipo = "duplicado" if request.GET.get("tipo") == "duplicado" else "original"
 
         datos = ReciboSueldoService(
-            LiquidacionEmpleado.objects.get(pk=object_id)
+            get_object_or_404(LiquidacionEmpleado, pk=object_id)
         ).obtener_datos(tipo=tipo)
+        svg = ReciboSueldoSvgRenderer(datos).render()
+
+        if request.GET.get("formato") == "pdf":
+            pdf = convertir_svg_a_pdf(svg)
+            response = HttpResponse(pdf, content_type="application/pdf")
+            entidad = slugify(datos["empresa"]["nombre"]) or "entidad"
+            fecha_hora = timezone.localtime().strftime("%Y-%m-%d_%H-%M-%S")
+            nombre_archivo = f"recibo-{entidad}-{fecha_hora}-{tipo}.pdf"
+            response["Content-Disposition"] = content_disposition_header(
+                True,
+                nombre_archivo,
+            )
+            return response
 
         html = render_to_string(
             "admin/liquidacion/recibo_sueldo.html",
-            datos,
+            {
+                "svg_markup": mark_safe(svg),
+                "pdf_url": f"{request.path}?tipo={tipo}&formato=pdf",
+            },
             request=request,
         )
 

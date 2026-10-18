@@ -1,11 +1,14 @@
-from django.db import models
-from django.core.exceptions import ValidationError
+from datetime import date
 
+from django.db import models
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+
+from core.models import ValidatingModel
 from liquidacion.choices import TipoEnvio, TipoLiquidacion
 from liquidacion.validators.v_liquidacion import validar_fechas
 
 
-class Liquidacion(models.Model):
+class Liquidacion(ValidatingModel):
     class Estado(models.TextChoices):
         BORRADOR = "borrador", "Borrador"
         EN_RECTIFICACION = "en_rectificacion", "En Rectificación"
@@ -103,7 +106,12 @@ class Liquidacion(models.Model):
         if self.pk is None:
             return None
 
-        return type(self).objects.only("estado").get(pk=self.pk).estado
+        return (
+            type(self).objects
+            .filter(pk=self.pk)
+            .values_list("estado", flat=True)
+            .first()
+        )
 
     class Meta:
         verbose_name = "liquidación"
@@ -124,18 +132,35 @@ class Liquidacion(models.Model):
                 "Esta liquidación no se puede modificar."
             )
 
-        if self.periodo.day != 1:
+        try:
+            periodo = self._meta.get_field("periodo").to_python(self.periodo)
+        except ValidationError:
+            periodo = None
+
+        try:
+            fecha_pago = self._meta.get_field("fecha_pago").to_python(self.fecha_pago)
+        except ValidationError:
+            fecha_pago = None
+
+        if isinstance(periodo, date) and periodo.day != 1:
             raise ValidationError(
                 "El periodo de liquidacion debe comenzar en el primer dia del rango."
             )
 
-        if self.periodo and self.fecha_pago:
-            validar_fechas(periodo=self.periodo, fecha_pago=self.fecha_pago)
+        if isinstance(periodo, date) and isinstance(fecha_pago, date):
+            validar_fechas(periodo=periodo, fecha_pago=fecha_pago)
 
         if self.tipo_envio == TipoEnvio.RE and self.tipo_liquidacion != "":
             raise ValidationError({
                 "tipo_liquidacion": (
                     "El tipo de liquidación debe quedar vacio cuando el tipo de envío es 'RE'."
+                )
+            })
+
+        if self.tipo_envio == TipoEnvio.SJ and not self.tipo_liquidacion:
+            raise ValidationError({
+                "tipo_liquidacion": (
+                    "El tipo de liquidación es obligatorio cuando el tipo de envío es 'SJ'."
                 )
             })
 
@@ -147,15 +172,23 @@ class Liquidacion(models.Model):
             })
 
     def save(self, *args, **kwargs):
+        skip_validation = False
+
         if self.pk is None:
             self.estado = self.Estado.BORRADOR
-            self.domicilio_empresa = self.empresa.domicilio
+            try:
+                empresa = self.empresa
+            except ObjectDoesNotExist:
+                empresa = None
+
+            if empresa:
+                self.domicilio_empresa = empresa.domicilio
 
             if self.tipo_envio == TipoEnvio.SJ:
                 ultima = (
                     type(self).objects
                     .filter(
-                        empresa=self.empresa,
+                        empresa_id=self.empresa_id,
                         periodo=self.periodo,
                         tipo_envio=TipoEnvio.SJ,
                     )
@@ -168,17 +201,23 @@ class Liquidacion(models.Model):
                 self.numero = None
         else:
             transition = kwargs.pop("_transition", False)
+            skip_validation = transition
             if not self.editable() and not transition:
                 raise ValidationError(
                     "Esta liquidación no se puede modificar."
                 )
 
-            original = type(self).objects.get(pk=self.pk)
+            original = type(self).objects.filter(pk=self.pk).first()
+            if original is None:
+                raise ValidationError("La liquidación no existe.")
 
             if self.empresa_id != original.empresa_id:
                 raise ValueError(
                     "La empresa de una liquidación no puede ser modificada."
                 )
+
+        if skip_validation:
+            kwargs["_skip_validation"] = True
 
         super().save(*args, **kwargs)
 

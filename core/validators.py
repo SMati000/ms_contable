@@ -13,7 +13,11 @@ def es_dni_valido(value):
 
     value = str(value).strip()
 
-    return value.isdigit() and 7 <= len(value) <= 8
+    return (
+        value.isascii()
+        and value.isdigit()
+        and 7 <= len(value) <= 8
+    )
 
 
 def validar_dni(value):
@@ -36,7 +40,7 @@ def es_cuil_valido(value):
 
     value = str(value).strip()
 
-    if len(value) != 11 or not value.isdigit():
+    if len(value) != 11 or not value.isascii() or not value.isdigit():
         return False
 
     # Los primeros 10 dígitos se utilizan para calcular el dígito verificador.
@@ -68,7 +72,15 @@ def validar_cuil(value):
         )
 
 
-def validar_cbu(cbu: str) -> bool:  # tmb sirve para cvu's
+def validar_cbu(cbu: str) -> None:  # tmb sirve para cvu's
+    if (
+        not isinstance(cbu, str)
+        or len(cbu) != 22
+        or not cbu.isascii()
+        or not cbu.isdigit()
+    ):
+        raise ValidationError("El CBU no es válido.")
+
     if not cbu_digito_verificador_1_valido(cbu) or not cbu_digito_verificador_2_valido(cbu):
         raise ValidationError("El CBU no es válido.")
 

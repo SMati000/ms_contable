@@ -1,16 +1,16 @@
-from datetime import date
-
 from django.db import models
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import admin
 
-from concepto.choices import Unidad
-from concepto.models import VersionConcepto
+from concepto.validation import validar_unidades
+from core.models import ValidatingModel
 from core.utils import format_decimal_2
 from liquidacion.choices import UnidadesLsd, DebitoCredito
+from liquidacion.validators.v_detalles import validar_debito_credito
+from liquidacion.validators.v_expresiones import validar_formula
 
 
-class DetalleLiquidacion(models.Model):
+class DetalleLiquidacion(ValidatingModel):
     id = models.BigAutoField(
         primary_key=True,
     )
@@ -111,36 +111,53 @@ class DetalleLiquidacion(models.Model):
     def clean(self):
         super().clean()
 
-        if not self.liquidacion_empleado.liquidacion.editable():
+        try:
+            liquidacion_empleado = self.liquidacion_empleado
+        except ObjectDoesNotExist:
+            liquidacion_empleado = None
+
+        try:
+            concepto = self.concepto
+        except ObjectDoesNotExist:
+            concepto = None
+
+        try:
+            concepto_base = concepto.concepto if concepto else None
+        except ObjectDoesNotExist:
+            concepto_base = None
+
+        try:
+            liquidacion = (
+                liquidacion_empleado.liquidacion
+                if liquidacion_empleado and liquidacion_empleado.liquidacion_id
+                else None
+            )
+        except ObjectDoesNotExist:
+            liquidacion = None
+
+        if liquidacion and not liquidacion.editable():
             raise ValidationError(
                 "Esta liquidación no se puede modificar."
             )
 
         if (
-            self.liquidacion_empleado_id
-            and self.concepto_id
-            and self.liquidacion_empleado.liquidacion.empresa_id != self.concepto.concepto.empresa_id
+            liquidacion
+            and concepto_base
+            and liquidacion.empresa_id != concepto_base.empresa_id
         ):
             raise ValidationError(
                 "El concepto asociado no pertenece a la empresa de la liquidación."
             )
 
-        unidad = Unidad(self.concepto.unidad)
-        if not unidad.constraint(self.unidades):
-            raise ValidationError({
-                "unidades": (
-                    f"El valor no es válido para la unidad "
-                    f"{self.concepto.get_unidad_display()}."
-                )
-            })
+        if concepto:
+            validar_unidades(concepto.unidad, self.unidades)
+            validar_debito_credito(concepto.codigo_arca, self.debito_credito)
+
+        if self.formula_base:
+            validar_formula(self.formula_base)
 
     def save(self, *args, **kwargs):
         if self.pk is not None:
-            if not self.liquidacion_empleado.liquidacion.editable():
-                raise ValidationError(
-                    "Esta liquidación no se puede modificar."
-                )
-
             original = type(self).objects.get(pk=self.pk)
 
             if self.liquidacion_empleado_id != original.liquidacion_empleado_id:

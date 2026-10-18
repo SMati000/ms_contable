@@ -1,7 +1,8 @@
 from django.db import models
+from core.models import ValidatingModel
 
 
-class CategoriaLaboral(models.Model):
+class CategoriaLaboral(ValidatingModel):
     id = models.BigAutoField(
         primary_key=True,
     )

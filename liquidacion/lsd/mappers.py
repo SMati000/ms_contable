@@ -3,9 +3,13 @@ from liquidacion.lsd.registro01 import DatosRegistro01
 from liquidacion.lsd.registro02 import DatosRegistro02
 from liquidacion.lsd.registro03 import DatosRegistro03
 from liquidacion.lsd.registro04 import DatosRegistro04
-from liquidacion.lsd.registro05 import DatosRegistro05
 from liquidacion.lsd.registro06 import DatosRegistro06
 from liquidacion.models import Liquidacion
+
+
+IDENTIFICADORES_BASES_LSD = tuple(
+    [f"remuneracion_{numero}" for numero in range(1, 11)] + ["detracciones"]
+)
 
 """
 Consideraciones generales:
@@ -17,6 +21,8 @@ Consideraciones generales:
 
 
 class Registro01Mapper:
+    liquidacion_select_related = ("empresa",)
+
     @staticmethod
     def obtener_datos(liquidacion: Liquidacion) -> DatosRegistro01:
         return DatosRegistro01(
@@ -30,6 +36,8 @@ class Registro01Mapper:
 
 
 class Registro02Mapper:
+    empleado_select_related = ("empleado", "version_empleado")
+
     @staticmethod
     def obtener_datos(liquidacion: Liquidacion) -> list[DatosRegistro02]:
         registros = []
@@ -52,6 +60,9 @@ class Registro02Mapper:
 
 
 class Registro03Mapper:
+    empleado_select_related = ("empleado",)
+    detalle_select_related = ("concepto", "concepto__grupo")
+
     @staticmethod
     def obtener_datos(liquidacion: Liquidacion) -> list[DatosRegistro03]:
         registros = {}
@@ -69,7 +80,7 @@ class Registro03Mapper:
                     registros[key] = Registro03Mapper._crear_registro(le, detalle)
                     continue
 
-                Registro03Mapper._validar_compatibilidad(registro, detalle)
+                Registro03Mapper._validar_compatibilidad(registro, le, detalle)
                 registro.importe += detalle.importe
 
         return list(registros.values())
@@ -89,6 +100,7 @@ class Registro03Mapper:
     @staticmethod
     def _validar_compatibilidad(
         registro: DatosRegistro03,
+        le: LiquidacionEmpleado,
         detalle,
     ) -> None:
         if (
@@ -97,10 +109,18 @@ class Registro03Mapper:
             or registro.debito_credito != detalle.debito_credito
             or registro.periodo_ajuste_retractivo != detalle.periodo_ajuste_retroactivo
         ):
-            raise ValueError("Los detalles con el mismo código ARCA deben tener los mismos datos excepto el importe.")
+            raise ValueError(
+                f"El empleado con CUIL {le.empleado.cuil} tiene más de un detalle "
+                f"para el concepto ARCA {detalle.concepto.codigo_arca} con datos "
+                "incompatibles; solo puede variar el importe."
+            )
 
 
 class Registro04Mapper:
+    empleado_select_related = ("empleado", "version_empleado")
+    empleado_prefetch_related = ("situaciones_revista",)
+    resultado_select_related = ("base_imponible",)
+
     @staticmethod
     def obtener_datos(liquidacion: Liquidacion) -> list[DatosRegistro04]:
         registros = []
@@ -112,8 +132,22 @@ class Registro04Mapper:
                 resultado.base_imponible.identificador: resultado.importe
                 for resultado in le.resultados_bases_imponibles.all()
             }
+            bases_faltantes = [
+                identificador
+                for identificador in IDENTIFICADORES_BASES_LSD
+                if identificador not in bases
+            ]
+            if bases_faltantes:
+                raise ValueError(
+                    f"El empleado con CUIL {le.empleado.cuil} no tiene resultados "
+                    "para las siguientes bases imponibles requeridas: "
+                    f"{', '.join(bases_faltantes)}."
+                )
 
-            tramos = list(le.situaciones_revista.order_by("dia_inicio"))
+            tramos = sorted(
+                le.situaciones_revista.all(),
+                key=lambda tramo: tramo.dia_inicio,
+            )
 
             tramo_1 = tramos[0] if len(tramos) > 0 else None
             tramo_2 = tramos[1] if len(tramos) > 1 else None
@@ -214,10 +248,9 @@ class Registro04Mapper:
         return registros
 
 
-# TODO - registro 05 para trabajadores eventuales
-
-
 class Registro06Mapper:
+    empleado_select_related = ("empleado",)
+
     @staticmethod
     def obtener_datos(liquidacion: Liquidacion) -> list[DatosRegistro06]:
         registros = []

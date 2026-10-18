@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
+from core.models import ValidatingModel
 
 GRUPOS_PROTEGIDOS = {
     "sindical",
@@ -31,7 +32,7 @@ class GrupoConceptoQuerySet(models.QuerySet):
         return super().delete()
 
 
-class GrupoConcepto(models.Model):
+class GrupoConcepto(ValidatingModel):
     objects = GrupoConceptoQuerySet.as_manager()
 
     id = models.BigAutoField(

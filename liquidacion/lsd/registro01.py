@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import ClassVar
 from datetime import date
-from core.validators import validar_cuit
 from liquidacion.choices import TipoLiquidacion, TipoEnvio
-from liquidacion.lsd.utils import validar_datos_obligatorios_dataclass
+from liquidacion.lsd.formatting import FormateadorRegistroLsd
+from liquidacion.lsd.validation import ValidadorRegistroLsd
 
 
 @dataclass
@@ -51,106 +51,115 @@ class GeneradorRegistro01:
         if len(resultado) == 35:
             return resultado
         else:
-            raise Exception(
+            raise ValueError(
                 "Error al generar Registro 01: longitud inválida.",
                 len(resultado),
                 resultado
             )
 
 
-class FormateadorRegistro01:
-    def __init__(self, datos: DatosRegistro01):
-        self.datos = datos
-
+class FormateadorRegistro01(FormateadorRegistroLsd):
     def periodo_liquidacion_formateado(self):
-        return self.datos.periodo_liquidacion.strftime("%Y%m")
+        return self.fecha_formateada(
+            self.datos.periodo_liquidacion,
+            "%Y%m",
+        )
 
     def tipo_liquidacion_formateado(self):
         tipo_liquidacion = self.datos.tipo_liquidacion
 
-        if tipo_liquidacion:
-            return tipo_liquidacion
-        else:
-            return " "
+        return self.texto_alineado(tipo_liquidacion, 1)
 
     def numero_liquidacion_formateado(self):
         numero_liquidacion = self.datos.numero_liquidacion
 
-        if numero_liquidacion:
-            return f"{numero_liquidacion:05d}"
-        else:
-            return "0" * 5
+        return self.formateado_como_entero(numero_liquidacion, 5)
 
     def cantidad_trabajadores_formateada(self):
-        return f"{self.datos.cantidad_trabajadores:06d}"
+        return self.formateado_como_entero(
+            self.datos.cantidad_trabajadores,
+            6,
+        )
 
 
-class ValidadorRegistro01:
-    def __init__(self, datos: DatosRegistro01):
-        self.datos = datos
-
-    def validar(self):
-        validar_datos_obligatorios_dataclass(self.datos)
+class ValidadorRegistro01(ValidadorRegistroLsd):
+    def validar_campos(self):
         self._validar_cuit()
         self._validar_tipos()
+        self._validar_periodo()
         self._validar_numero_liquidacion()
         self._validar_cantidad_trabajadores()
 
     def _validar_cuit(self):
         cuit = self.datos.cuit_empleador
 
-        if len(cuit) != 11:
-            raise Exception(  # TODO - definir mejor el tipo de excepcion
-                "El CUIT del empleador debe tener 11 dígitos."
-            )
-
-        validar_cuit(cuit)
+        self._validar_identificador_fiscal("CUIT del empleador", cuit)
 
     def _validar_tipos(self):
         tipo_envio = self.datos.tipo_envio
         tipo_liq = self.datos.tipo_liquidacion
 
-        if tipo_envio not in TipoEnvio.values:
-            raise Exception(
+        if not isinstance(tipo_envio, str) or tipo_envio not in TipoEnvio.values:
+            raise ValueError(
                 f"El tipo de envío {tipo_envio} no es válido."
             )
 
+        if tipo_liq is not None and not isinstance(tipo_liq, str):
+            raise ValueError("El tipo de liquidación debe ser texto.")
+
         if tipo_envio == TipoEnvio.RE:
             if tipo_liq:
-                raise Exception(
+                raise ValueError(
                     "El tipo de liquidación debe quedar vacío cuando el tipo de envío es RE."
                 )
         elif tipo_envio == TipoEnvio.SJ:
             if not tipo_liq:
-                raise Exception(
-                    "El tipo de liquidación debe ser M o Q cuando el tipo de envío es SJ."
+                raise ValueError(
+                    "El tipo de liquidación es obligatorio cuando el tipo de envío es SJ."
                 )
 
             if tipo_liq not in TipoLiquidacion.values:
-                raise Exception(
+                raise ValueError(
                     f"El tipo de liquidación {tipo_liq} no es válido."
                 )
+
+    def _validar_periodo(self):
+        periodo = self.datos.periodo_liquidacion
+        self._validar_fecha("período de liquidación", periodo, obligatoria=True)
+
+        if periodo.day != 1:
+            raise ValueError(
+                "El período de liquidación debe comenzar el primer día del mes."
+            )
 
     def _validar_numero_liquidacion(self):
         tipo_envio = self.datos.tipo_envio
         numero_liq = self.datos.numero_liquidacion
 
         if tipo_envio == TipoEnvio.RE:
-            if numero_liq and numero_liq != 0:
-                raise Exception(
-                    "El número de liquidación debe quedar vacío cuando el tipo de envío es RE."
+            if numero_liq is not None:
+                self._validar_entero(
+                    "número de liquidación",
+                    numero_liq,
+                    obligatoria=True,
+                    minimo=0,
+                    maximo=0,
                 )
 
         elif tipo_envio == TipoEnvio.SJ:
-            if numero_liq == "":
-                raise Exception(
-                    "El número de liquidación es obligatorio cuando el tipo de envío es SJ."
-                )
+            self._validar_entero(
+                "número de liquidación",
+                numero_liq,
+                obligatoria=True,
+                minimo=1,
+                maximo=99999,
+            )
 
     def _validar_cantidad_trabajadores(self):
-        cantidad_trabajadores = self.datos.cantidad_trabajadores
-
-        if not 0 <= cantidad_trabajadores <= 999999:
-            raise Exception(
-                "La cantidad de trabajadores no es valida."
-            )
+        self._validar_entero(
+            "cantidad de trabajadores",
+            self.datos.cantidad_trabajadores,
+            obligatoria=True,
+            minimo=0,
+            maximo=999999,
+        )

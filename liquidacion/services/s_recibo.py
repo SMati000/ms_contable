@@ -2,6 +2,7 @@ from decimal import Decimal
 from num2words import num2words
 
 from concepto.choices import Categoria, Unidad, Tipo
+from core.utils import format_decimal_trimmed, quantize_decimal
 from concepto.models import VersionConcepto
 from liquidacion.models import LiquidacionEmpleado
 from liquidacion.services.GraficoCostoLaboralService import GraficoCostoLaboralService, ComposicionCostoLaboral
@@ -208,7 +209,7 @@ class ReciboSueldoService:
 
     @staticmethod
     def neto_en_letras(valor):
-        valor = valor.quantize(Decimal("0.01"))
+        valor = quantize_decimal(valor, 2)
 
         parte_entera = int(valor)
         centavos = int((valor - parte_entera) * 100)
@@ -251,7 +252,8 @@ class ReciboSueldoService:
 
     @staticmethod
     def _formatear_unidad(unidad, unidades):
-        return f"{unidades:.2f} {Unidad(unidad).sufijo}"
+        cantidad = format_decimal_trimmed(unidades, max_places=5)
+        return f"{cantidad} {Unidad(unidad).sufijo}".rstrip()
 
     @staticmethod
     def _decimal_a_string(valor):

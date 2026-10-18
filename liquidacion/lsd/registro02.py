@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import ClassVar
 from datetime import date
-from core.validators import validar_cuil, validar_cbu
+from core.validators import validar_cbu
 from empleado.choices import FormaPago
-from liquidacion.lsd.utils import validar_datos_obligatorios_dataclass
+from liquidacion.lsd.formatting import FormateadorRegistroLsd
+from liquidacion.lsd.validation import ValidadorRegistroLsd
 
 
 @dataclass
@@ -50,31 +51,26 @@ class GeneradorRegistro02:
         if len(resultado) == 115:
             return resultado
         else:
-            raise Exception(
+            raise ValueError(
                 "Error al generar Registro 02: longitud inválida.",
                 len(resultado),
             )
 
 
-class FormateadorRegistro02:
-    def __init__(self, datos: DatosRegistro02):
-        self.datos = datos
-
+class FormateadorRegistro02(FormateadorRegistroLsd):
     def legajo_formateado(self):
-        legajo = self.datos.legajo_trabajador
-
-        if legajo:
-            return f"{legajo:0>10}"
-        else:
-            return "0" * 10
+        return self.texto_alineado(
+            self.datos.legajo_trabajador,
+            10,
+            relleno="0",
+            alineacion=">",
+        )
 
     def dependencia_revista_trabajador_formateado(self):
-        dependencia_revista_trabajador = self.datos.dependencia_revista_trabajador
-
-        if dependencia_revista_trabajador:
-            return f"{dependencia_revista_trabajador:<50}"
-        else:
-            return " " * 50
+        return self.texto_alineado(
+            self.datos.dependencia_revista_trabajador,
+            50,
+        )
 
     def cbu_acreditacion_pago_formateado(self):
         cbu_acreditacion_pago = self.datos.cbu_acreditacion_pago
@@ -85,74 +81,78 @@ class FormateadorRegistro02:
         return cbu_acreditacion_pago
 
     def cantidad_dias_tope_formateada(self):
-        cantidad_dias_tope = self.datos.cantidad_dias_tope
-
-        if cantidad_dias_tope:
-            return f"{cantidad_dias_tope:03d}"
-        else:
-            return "0" * 3
+        return self.formateado_como_entero(
+            self.datos.cantidad_dias_tope,
+            3,
+        )
 
     def fecha_rubrica_formateada(self):
-        fecha_rubrica = self.datos.fecha_rubrica
-
-        if fecha_rubrica:
-            return fecha_rubrica.strftime("%Y%m%d")
-        else:
-            return " " * 8
+        return self.fecha_formateada(
+            self.datos.fecha_rubrica,
+            valor_vacio=" " * 8,
+        )
 
 
-class ValidadorRegistro02:
-    def __init__(self, datos: DatosRegistro02):
-        self.datos = datos
-
-    def validar(self):
-        validar_datos_obligatorios_dataclass(self.datos)
+class ValidadorRegistro02(ValidadorRegistroLsd):
+    def validar_campos(self):
         self._validar_cuil()
         self._validar_forma_pago()
+        self._validar_fechas()
         self._validar_legajo()
         self._validar_dependencia_revista()
         self._validar_cbu()
         self._validar_cantidad_dias_tope()
 
-    def _validar_cuil(self):
-        cuil = self.datos.cuil_trabajador
-
-        if len(cuil) != 11:
-            raise Exception(  # TODO - definir mejor el tipo de excepcion
-                "El CUIL de los trabajadores debe tener 11 dígitos."
-            )
-
-        validar_cuil(cuil)
-
     def _validar_forma_pago(self):
         forma_pago = self.datos.forma_pago
 
-        if forma_pago not in FormaPago.values:
-            raise Exception(
+        if (
+            isinstance(forma_pago, bool)
+            or not isinstance(forma_pago, int)
+            or forma_pago not in FormaPago.values
+        ):
+            raise ValueError(
                 f"La forma de pago {forma_pago} no es válida."
             )
+
+    def _validar_fechas(self):
+        self._validar_fecha("fecha de pago", self.datos.fecha_pago, obligatoria=True)
+        self._validar_fecha("fecha de rúbrica", self.datos.fecha_rubrica, obligatoria=False)
 
     def _validar_legajo(self):
         legajo = self.datos.legajo_trabajador
 
-        if not legajo:
+        if legajo is None or legajo == "":
             return
+
+        if not isinstance(legajo, str):
+            raise ValueError("El legajo de los trabajadores debe ser texto.")
+
+        self._validar_codificacion_ansi("legajo", legajo)
 
         max_long = 10
         if len(legajo) > max_long:
-            raise Exception(
+            raise ValueError(
                 f"El legajo de los trabajadores no debe tener una longitud mayor a {max_long} digitos."
             )
 
     def _validar_dependencia_revista(self):
         dependencia_revista = self.datos.dependencia_revista_trabajador
 
-        if not dependencia_revista:
+        if dependencia_revista is None or dependencia_revista == "":
             return
+
+        if not isinstance(dependencia_revista, str):
+            raise ValueError("La dependencia de revista debe ser texto.")
+
+        self._validar_codificacion_ansi(
+            "dependencia de revista",
+            dependencia_revista,
+        )
 
         max_long = 50
         if len(dependencia_revista) > max_long:
-            raise Exception(
+            raise ValueError(
                 f"La dependencia de revista de los trabajadores no debe "
                 f"tener una longitud mayor a {max_long} digitos."
             )
@@ -160,27 +160,25 @@ class ValidadorRegistro02:
     def _validar_cbu(self):
         cbu = self.datos.cbu_acreditacion_pago
 
-        if not cbu:
+        if cbu is None or cbu == "":
             if self.datos.forma_pago == FormaPago.ACREDITACION_EN_CUENTA:
-                raise Exception("El CBU es obligatorio para la forma de pago \"Acreditación en Cuenta\".")
+                raise ValueError("El CBU es obligatorio para la forma de pago \"Acreditación en Cuenta\".")
             else:
                 return
 
-        if not cbu.isdigit():
-            raise Exception("El CBU debe contener únicamente dígitos.")
+        if not isinstance(cbu, str) or not cbu.isascii() or not cbu.isdigit():
+            raise ValueError("El CBU debe contener únicamente dígitos.")
 
         if len(cbu) != 22:
-            raise Exception("El CBU debe tener 22 dígitos.")
+            raise ValueError("El CBU debe tener 22 dígitos.")
 
         validar_cbu(cbu)
 
     def _validar_cantidad_dias_tope(self):
-        cantidad_dias_tope = self.datos.cantidad_dias_tope
-
-        if not cantidad_dias_tope:
-            return
-
-        if not 0 <= cantidad_dias_tope <= 999:
-            raise Exception(
-                "La cantidad de dias tope no es valida. Debe contener, como máximo, 3 digitos."
-            )
+        self._validar_entero(
+            "cantidad de días tope",
+            self.datos.cantidad_dias_tope,
+            obligatoria=False,
+            minimo=0,
+            maximo=999,
+        )

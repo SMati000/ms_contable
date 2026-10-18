@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib import admin
 from django.core.validators import RegexValidator
+from core.models import ValidatingModel
 from core.utils import format_decimal_2
 
 
@@ -48,7 +49,7 @@ class BaseImponible(models.Model):
         return f"{self.denominacion}"
 
 
-class ResultadoBaseImponible(models.Model):
+class ResultadoBaseImponible(ValidatingModel):
     liquidacion_empleado = models.ForeignKey(
         "liquidacion.LiquidacionEmpleado",
         on_delete=models.CASCADE,

@@ -1,10 +1,9 @@
 from dataclasses import dataclass
 from typing import ClassVar
 from enum import IntEnum
-from decimal import Decimal
 
-from core.validators import validar_cuil
-from liquidacion.lsd.utils import validar_datos_obligatorios_dataclass
+from liquidacion.lsd.validation import ValidadorRegistroLsd
+from liquidacion.lsd.formatting import FormateadorRegistroLsd
 
 
 @dataclass
@@ -37,45 +36,28 @@ class GeneradorRegistro06:
         if len(resultado) == 93:  # 108 si se incluye id_liquidacion
             return resultado
         else:
-            raise Exception(
+            raise ValueError(
                 f"Error al generar Registro 06: longitud inválida.",
                 len(resultado),
                 resultado
             )
 
 
-class FormateadorRegistro06:
-    def __init__(self, datos: DatosRegistro06):
-        self.datos = datos
-
+class FormateadorRegistro06(FormateadorRegistroLsd):
     def observaciones_formateadas(self):
-        observaciones = self.datos.observaciones
+        return self.texto_alineado(
+            self.datos.observaciones,
+            80,
+            relleno="0",
+            alineacion=">",
+        )
 
-        if observaciones:
-            return f"{observaciones:0>80}"
-        else:
-            return "0" * 80
 
-
-class ValidadorRegistro06:
-    def __init__(self, datos: DatosRegistro06):
-        self.datos = datos
-
-    def validar(self):
-        validar_datos_obligatorios_dataclass(self.datos)
+class ValidadorRegistro06(ValidadorRegistroLsd):
+    def validar_campos(self):
         self._validar_cuil()
         # self._validar_id_liquidacion()
         self._validar_observaciones()
-
-    def _validar_cuil(self):
-        cuil = self.datos.cuil_trabajador
-
-        if len(cuil) != 11:
-            raise Exception(  # TODO - definir mejor el tipo de excepcion
-                "El CUIL de los trabajadores debe tener 11 dígitos."
-            )
-
-        validar_cuil(cuil)
 
     # def _validar_id_liquidacion(self):
     #     id_liquidacion = self.datos.id_liquidacion
@@ -96,13 +78,13 @@ class ValidadorRegistro06:
     def _validar_observaciones(self):
         observaciones = self.datos.observaciones
 
-        if observaciones == "":
-            raise Exception(
-                f"El campo observaciones es obligatorio."
-            )
+        if not isinstance(observaciones, str):
+            raise ValueError("El campo observaciones debe ser texto.")
+
+        self._validar_codificacion_ansi("observaciones", observaciones)
 
         max_long = 80
         if len(observaciones) > max_long:
-            raise Exception(
+            raise ValueError(
                 f"Las observaciones no deben tener una longitud mayor a {max_long} digitos."
             )

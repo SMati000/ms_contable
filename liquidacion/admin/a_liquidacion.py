@@ -11,6 +11,7 @@ from ..forms import LiquidacionEmpleadoInlineForm, LiquidacionEmpleadoInlineForm
 from ..models import LiquidacionEmpleado
 from ..models.m_liquidacion import Liquidacion
 from ..services.TxtLsdArca import LsdTxtArcaService
+from ..lsd.exceptions import ErroresGeneracionLsd
 
 
 class LiquidacionEmpleadoInline(admin.TabularInline):
@@ -201,12 +202,45 @@ class LiquidacionAdmin(admin.ModelAdmin):
         if obj is None:
             raise Http404
 
-        txt = LsdTxtArcaService(obj.id).generar()
+        try:
+            txt = LsdTxtArcaService(obj.id).generar()
+            contenido = txt.encode("cp1252")
+        except ErroresGeneracionLsd as error:
+            self.message_user(
+                request,
+                "No se pudo generar el TXT LSD.",
+                messages.ERROR,
+            )
+            for detalle in error.errores:
+                self.message_user(request, detalle, messages.ERROR)
+            return redirect(
+                reverse("admin:liquidacion_liquidacion_change", args=[obj.pk])
+            )
+        except UnicodeEncodeError:
+            self.message_user(
+                request,
+                "No se pudo generar el TXT LSD: hay caracteres que no admite la codificación ANSI.",
+                messages.ERROR,
+            )
+            return redirect(
+                reverse("admin:liquidacion_liquidacion_change", args=[obj.pk])
+            )
+        except Exception:
+            self.message_user(
+                request,
+                "Ocurrió un error inesperado al generar el TXT LSD. "
+                "La liquidación no fue cerrada; revisá los datos e intentá nuevamente.",
+                messages.ERROR,
+            )
+            return redirect(
+                reverse("admin:liquidacion_liquidacion_change", args=[obj.pk])
+            )
+
         obj.cerrar()
 
         response = HttpResponse(
-            txt,
-            content_type="text/plain; charset=utf-8",
+            contenido,
+            content_type="text/plain; charset=windows-1252",
         )
         response["Content-Disposition"] = (
             f'attachment; filename="liquidacion_'

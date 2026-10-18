@@ -6,6 +6,7 @@ from concepto.choices import Categoria, Tipo, Unidad
 from concepto.rules import validar_tipo_categoria
 from concepto.validators import validar_no_remuneracion
 from core.utils import normalizar_identificador
+from core.models import ValidatingModel
 
 
 class ConceptoQuerySet(models.QuerySet):
@@ -31,7 +32,7 @@ class ConceptoManager(models.Manager.from_queryset(ConceptoQuerySet)):
         return super().get_queryset().activos()
 
 
-class Concepto(models.Model):
+class Concepto(ValidatingModel):
     objects = ConceptoManager()
     todos = ConceptoQuerySet.as_manager()
 
@@ -73,7 +74,8 @@ class Concepto(models.Model):
         return super().delete()
 
     def __str__(self):
-        return VersionConcepto.todos.filter(concepto=self).ultima().denominacion
+        version = VersionConcepto.todos.filter(concepto=self).ultima()
+        return version.denominacion if version else f"Concepto {self.pk}"
 
 
 class VersionConceptoQuerySet(models.QuerySet):
@@ -104,7 +106,7 @@ class VersionConceptoManager(models.Manager.from_queryset(VersionConceptoQuerySe
         return super().get_queryset().activos()
 
 
-class VersionConcepto(models.Model):
+class VersionConcepto(ValidatingModel):
     objects = VersionConceptoManager()
     todos = VersionConceptoQuerySet.as_manager()
 
@@ -208,7 +210,7 @@ class VersionConcepto(models.Model):
             self.version = 1
 
             ultima_version = (
-                type(self).objects.filter(concepto=self.concepto)
+                type(self).objects.filter(concepto_id=self.concepto_id)
                 .ultima()
             )
 

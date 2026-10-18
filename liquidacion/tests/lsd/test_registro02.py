@@ -77,4 +77,48 @@ class TestGeneradorRegistro02(SimpleTestCase):
 
         datos = self.datos_registro(**cambios)
 
-        self.assertRaises(Exception, lambda: GeneradorRegistro02(datos).generar())
+        with self.assertRaises(ValueError):
+            GeneradorRegistro02(datos).generar()
+
+    def test_cbu_unicode_es_rechazado(self):
+        datos = self.datos_registro(
+            cbu_acreditacion_pago="0000000²" + "0" * 14,
+            forma_pago=FormaPago.ACREDITACION_EN_CUENTA,
+        )
+
+        with self.assertRaises(ValueError):
+            GeneradorRegistro02(datos).generar()
+
+    def test_cbu_de_tipo_invalido_no_genera_error_de_atributo(self):
+        datos = self.datos_registro(
+            cbu_acreditacion_pago=1234567890123456789012,
+            forma_pago=FormaPago.ACREDITACION_EN_CUENTA,
+        )
+
+        with self.assertRaises(ValueError):
+            GeneradorRegistro02(datos).generar()
+
+    def test_fechas_y_campos_con_tipos_invalidos_producen_value_error(self):
+        casos = (
+            {"fecha_pago": "2026-09-30"},
+            {"fecha_rubrica": "2026-09-30"},
+            {"legajo_trabajador": 123},
+            {"dependencia_revista_trabajador": 1},
+            {"cantidad_dias_tope": 1.5},
+        )
+
+        for cambios in casos:
+            with self.subTest(cambios=cambios):
+                with self.assertRaises(ValueError):
+                    GeneradorRegistro02(self.datos_registro(**cambios)).generar()
+
+    def test_textos_fuera_de_ansi_son_rechazados(self):
+        casos = (
+            {"legajo_trabajador": "LEGAJO😀"},
+            {"dependencia_revista_trabajador": "Sucursal 😀"},
+        )
+
+        for cambios in casos:
+            with self.subTest(cambios=cambios):
+                with self.assertRaisesRegex(ValueError, "ANSI"):
+                    GeneradorRegistro02(self.datos_registro(**cambios)).generar()

@@ -4,12 +4,13 @@ from django.contrib import admin
 from django.core.validators import MinValueValidator
 from core.utils import format_cuil
 from core.validators import validar_dni, validar_cuil, no_fecha_futura, validar_cbu
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from empleado.choices import FormaPago
 from empleado.rules import validar_forma_pago_cbu, validar_dni_cuil
+from core.models import ValidatingModel
 
 
-class Empleado(models.Model):
+class Empleado(ValidatingModel):
     id = models.BigAutoField(
         primary_key=True,
     )
@@ -130,7 +131,7 @@ class VersionEmpleadoManager(models.Manager.from_queryset(VersionEmpleadoQuerySe
     pass
 
 
-class VersionEmpleado(models.Model):
+class VersionEmpleado(ValidatingModel):
     objects = VersionEmpleadoManager()
     todos = VersionEmpleadoQuerySet.as_manager()
 
@@ -223,21 +224,34 @@ class VersionEmpleado(models.Model):
     def clean(self):
         super().clean()
 
+        try:
+            empleado = self.empleado
+        except ObjectDoesNotExist:
+            empleado = None
+
+        try:
+            categoria_laboral = self.categoria_laboral
+        except ObjectDoesNotExist:
+            categoria_laboral = None
+
         if (
-            self.empleado.empresa_id
-            and self.categoria_laboral_id
-            and self.empleado.empresa_id != self.categoria_laboral.empresa_id
+            empleado
+            and categoria_laboral
+            and empleado.empresa_id != categoria_laboral.empresa_id
         ):
             raise ValidationError(
                 "La cateogoria laboral asociada no pertenece a la misma empresa que este empleado."
             )
 
-        validar_forma_pago_cbu(forma_de_pago=self.forma_de_pago, cbu=self.cbu)
+        validar_forma_pago_cbu(
+            forma_de_pago=self.forma_de_pago,
+            cbu=self.cbu,
+        )
 
     def save(self, *args, **kwargs):
         if self.pk is None:
             ultima_version = (
-                type(self).objects.filter(empleado=self.empleado)
+                type(self).objects.filter(empleado_id=self.empleado_id)
                 .ultima()
             )
 

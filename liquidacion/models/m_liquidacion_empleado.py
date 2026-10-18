@@ -1,7 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import admin
+from core.models import ValidatingModel
 from core.utils import format_decimal_2
 
 
@@ -16,7 +17,7 @@ IDENTIFICADORES_LE = {
 }
 
 
-class LiquidacionEmpleado(models.Model):
+class LiquidacionEmpleado(ValidatingModel):
     class UnidadTiempoTrabajado(models.TextChoices):
         D = "d", "Días"
         H = "h", "Horas"
@@ -209,64 +210,64 @@ class LiquidacionEmpleado(models.Model):
     )
 
     aporte_adicional_obra_social = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     contrib_adicional_obra_social = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     base_calc_diferencial_aportes_obra_social_fsr = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     base_calc_diferencial_contrib_obra_social_fsr = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     base_calc_diferencial_ley_riesgos_trabajo = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     remuneracion_maternidad_anses = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     base_calc_diferencial_aportes_seg_social = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
     )
 
     base_calc_diferencial_contrib_seg_social = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
+        max_digits=18,
+        decimal_places=5,
         default=0,
         null=False,
         blank=False,
@@ -321,23 +322,39 @@ class LiquidacionEmpleado(models.Model):
     def clean(self):
         super().clean()
 
-        if not self.liquidacion.editable():
+        try:
+            liquidacion = self.liquidacion
+        except ObjectDoesNotExist:
+            liquidacion = None
+
+        try:
+            empleado = self.empleado
+        except ObjectDoesNotExist:
+            empleado = None
+
+        try:
+            version_empleado = self.version_empleado
+        except ObjectDoesNotExist:
+            version_empleado = None
+
+        if liquidacion and not liquidacion.editable():
             raise ValidationError(
                 "Esta liquidación no se puede modificar."
             )
 
         if (
-            self.liquidacion_id
-            and self.empleado_id
-            and self.liquidacion.empresa_id != self.empleado.empresa_id
+            liquidacion
+            and empleado
+            and liquidacion.empresa_id != empleado.empresa_id
         ):
             raise ValidationError(
                 "El empleado no pertenece a la empresa de la liquidación."
             )
 
         if (
-            self.empleado_id and self.version_empleado_id
-            and self.empleado_id != self.version_empleado.empleado_id
+            empleado
+            and version_empleado
+            and empleado.pk != version_empleado.empleado_id
         ):
             raise ValidationError(
                 "Empleado y version de empleado inconsistentes."
@@ -345,11 +362,6 @@ class LiquidacionEmpleado(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            if not self.liquidacion.editable():
-                raise ValidationError(
-                    "Esta liquidación no se puede modificar."
-                )
-
             original = type(self).objects.get(pk=self.pk)
 
             if self.liquidacion_id != original.liquidacion_id:

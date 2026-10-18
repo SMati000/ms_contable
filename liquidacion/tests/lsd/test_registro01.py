@@ -82,3 +82,17 @@ class TestGeneradorRegistro01(SimpleTestCase):
         datos = self.datos_registro(**cambios)
 
         self.assertRaises(Exception, lambda: GeneradorRegistro01(datos).generar())
+
+    def test_datos_con_tipos_o_rangos_invalidos_producen_value_error(self):
+        casos = (
+            {"periodo_liquidacion": "2026-09-01"},
+            {"cantidad_trabajadores": "37"},
+            {"cantidad_trabajadores": True},
+            {"numero_liquidacion": 100000},
+            {"cuit_empleador": "20123456789"},
+        )
+
+        for cambios in casos:
+            with self.subTest(cambios=cambios):
+                with self.assertRaises(ValueError):
+                    GeneradorRegistro01(self.datos_registro(**cambios)).generar()

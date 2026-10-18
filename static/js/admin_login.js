@@ -38,6 +38,7 @@ document.addEventListener("submit", async (event) => {
         currentForm.replaceWith(document.importNode(updatedForm, true));
         document.title = responseDocument.title;
         errorNote.focus();
+        document.dispatchEvent(new Event("form-errors:refresh"));
     } catch {
         const content = document.querySelector("#content");
         const contentMain = content?.querySelector("#content-main");
@@ -48,6 +49,7 @@ document.addEventListener("submit", async (event) => {
             errorNote.textContent = "No se pudo conectar. Intentá de nuevo.";
             content.querySelectorAll(".errornote").forEach((error) => error.remove());
             content.insertBefore(errorNote, contentMain);
+            document.dispatchEvent(new Event("form-errors:refresh"));
         }
     } finally {
         const currentForm = document.querySelector("#login-form");

@@ -98,35 +98,56 @@ class TestGeneradorRegistro05(SimpleTestCase):
                     "fecha_ingreso": date(2026, 9, 26),
                     "fecha_egreso": date(2025, 9, 26),
                 },
-                Exception,
+                ValueError,
             ),
             (
                 "categoria_invalida",
                 {
                     "categoria_profesional": "5487354",
                 },
-                Exception,
+                ValueError,
             ),
             (
                 "puesto_invalido",
                 {
                     "puesto_desempeniado": "76213",
                 },
-                Exception,
+                ValueError,
             ),
             (
                 "remuneracion_tope",
                 {
                     "remuneracion": Decimal("12345678901234.00"),
                 },
-                Exception,
+                ValueError,
             ),
             (
                 "remuneracion_negativa",
                 {
                     "remuneracion": Decimal("-10.00"),
                 },
-                Exception,
+                ValueError,
+            ),
+            (
+                "fecha_ingreso_no_es_fecha",
+                {
+                    "fecha_ingreso": "2026-09-26",
+                },
+                ValueError,
+            ),
+            (
+                "remuneracion_no_finita",
+                {
+                    "remuneracion": Decimal("NaN"),
+                },
+                ValueError,
+            ),
+            (
+                "categoria_no_es_texto",
+                {
+                    "categoria_profesional": 12,
+                },
+                ValueError,
             ),
         ]
 
@@ -134,4 +155,17 @@ class TestGeneradorRegistro05(SimpleTestCase):
             with self.subTest(nombre):
                 datos = self.datos_registro(**cambios)
 
-                self.assertRaises(Exception, lambda: GeneradorRegistro05(datos).generar())
+                with self.assertRaises(esperado):
+                    GeneradorRegistro05(datos).generar()
+
+    def test_fecha_identificador_y_redondeo_fuera_de_rango_se_validan(self):
+        casos = (
+            {"fecha_ingreso": "2026-09-26"},
+            {"cuit_empleador": "20123456789"},
+            {"remuneracion": Decimal("9999999999999.999")},
+        )
+
+        for cambios in casos:
+            with self.subTest(cambios=cambios):
+                with self.assertRaises(ValueError):
+                    GeneradorRegistro05(self.datos_registro(**cambios)).generar()

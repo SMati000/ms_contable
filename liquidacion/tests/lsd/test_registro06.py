@@ -19,6 +19,11 @@ class TestGeneradorRegistro06(SimpleTestCase):
     def test_generar(self):
         casos = [
             (
+                "observacion_vacia",
+                {"observaciones": ""},
+                "0633693450239" + "0" * 80,
+            ),
+            (
                 "original",
                 {},
                 "063369345023900000000000000000000000000000000000000000000000000000000000Observación de prueba",
@@ -46,19 +51,17 @@ class TestGeneradorRegistro06(SimpleTestCase):
 
                 self.assertEqual(registro, esperado)
 
-    def test_datos_invalidos(self):
+    def test_observaciones_mayores_a_80_caracteres_o_fuera_de_ansi_son_invalidas(self):
         casos = [
-            (
-                "observacion_vacia",
-                {
-                    "observaciones": "",
-                }
-            ),
             (
                 "observacion_tope",
                 {
                     "observaciones": "A" * 82,
                 }
+            ),
+            (
+                "caracter_no_ansi",
+                {"observaciones": "Observación 😀"},
             ),
         ]
 
@@ -66,5 +69,18 @@ class TestGeneradorRegistro06(SimpleTestCase):
             with self.subTest(nombre):
                 datos = self.datos_registro(**cambios)
 
-                self.assertRaises(Exception, lambda: GeneradorRegistro06(datos).generar())
+                with self.assertRaises(ValueError):
+                    GeneradorRegistro06(datos).generar()
+
+    def test_observaciones_y_cuil_invalidos_producen_value_error(self):
+        casos = (
+            {"observaciones": None},
+            {"observaciones": 123},
+            {"cuil_trabajador": "20123456789"},
+        )
+
+        for cambios in casos:
+            with self.subTest(cambios=cambios):
+                with self.assertRaises(ValueError):
+                    GeneradorRegistro06(self.datos_registro(**cambios)).generar()
 

@@ -28,7 +28,6 @@ class LiquidacionEmpleadoService:
         self._asignar_version_empleado()
 
         if commit:
-            self.liquidacion_empleado.full_clean()
             self.liquidacion_empleado.save()
 
         self.crear_resultados_bases_imponibles()
@@ -43,14 +42,22 @@ class LiquidacionEmpleadoService:
         """
         bases = BaseImponible.objects.all()
 
-        ResultadoBaseImponible.objects.bulk_create([
+        resultados = [
             ResultadoBaseImponible(
                 liquidacion_empleado=self.liquidacion_empleado,
                 base_imponible=base,
                 importe=Decimal("0"),
             )
             for base in bases
-        ])
+        ]
+
+        for resultado in resultados:
+            resultado.full_clean(
+                validate_unique=False,
+                validate_constraints=False,
+            )
+
+        ResultadoBaseImponible.objects.bulk_create(resultados)
 
     def _asignar_version_empleado(self):
         version = (

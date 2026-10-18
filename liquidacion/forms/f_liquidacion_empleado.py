@@ -1,14 +1,57 @@
 from django import forms
 from django.forms.models import BaseInlineFormSet
 from base_imponible.models import ResultadoBaseImponible
-from core.utils import format_decimal_2
+from core.forms import DecimalInputField
 from empleado.models import Empleado
 from ..models import TramoSituacionRevista
 from ..models.m_liquidacion_empleado import LiquidacionEmpleado
 from ..services.LiquidacionEmpleadoService import LiquidacionEmpleadoService
 
 
+def _decimal_input_for(model, field_name):
+    model_field = model._meta.get_field(field_name)
+    return DecimalInputField(
+        label=model_field.verbose_name.capitalize(),
+        max_digits=model_field.max_digits,
+        decimal_places=model_field.decimal_places,
+        required=not model_field.blank,
+    )
+
+
 class LiquidacionEmpleadoForm(forms.ModelForm):
+    aporte_adicional_obra_social = _decimal_input_for(
+        LiquidacionEmpleado,
+        "aporte_adicional_obra_social",
+    )
+    contrib_adicional_obra_social = _decimal_input_for(
+        LiquidacionEmpleado,
+        "contrib_adicional_obra_social",
+    )
+    base_calc_diferencial_aportes_obra_social_fsr = _decimal_input_for(
+        LiquidacionEmpleado,
+        "base_calc_diferencial_aportes_obra_social_fsr",
+    )
+    base_calc_diferencial_contrib_obra_social_fsr = _decimal_input_for(
+        LiquidacionEmpleado,
+        "base_calc_diferencial_contrib_obra_social_fsr",
+    )
+    base_calc_diferencial_ley_riesgos_trabajo = _decimal_input_for(
+        LiquidacionEmpleado,
+        "base_calc_diferencial_ley_riesgos_trabajo",
+    )
+    remuneracion_maternidad_anses = _decimal_input_for(
+        LiquidacionEmpleado,
+        "remuneracion_maternidad_anses",
+    )
+    base_calc_diferencial_aportes_seg_social = _decimal_input_for(
+        LiquidacionEmpleado,
+        "base_calc_diferencial_aportes_seg_social",
+    )
+    base_calc_diferencial_contrib_seg_social = _decimal_input_for(
+        LiquidacionEmpleado,
+        "base_calc_diferencial_contrib_seg_social",
+    )
+
     class Meta:
         model = LiquidacionEmpleado
         fields = "__all__"
@@ -24,6 +67,9 @@ class LiquidacionEmpleadoForm(forms.ModelForm):
                 }
             ),
         }
+
+    class Media:
+        js = ("core/js/decimal_input.js",)
 
 
 class LiquidacionEmpleadoInlineForm(forms.ModelForm):
@@ -77,10 +123,10 @@ class ImporteResultadoWidget(forms.NumberInput):
 
 
 class ResultadoBaseImponibleInlineForm(forms.ModelForm):
-    importe = forms.DecimalField(
+    importe = DecimalInputField(
         label="Importe",
         max_digits=ResultadoBaseImponible._meta.get_field("importe").max_digits,
-        decimal_places=2,
+        decimal_places=ResultadoBaseImponible._meta.get_field("importe").decimal_places,
         required=True,
         widget=ImporteResultadoWidget(),
     )
@@ -89,11 +135,14 @@ class ResultadoBaseImponibleInlineForm(forms.ModelForm):
         model = ResultadoBaseImponible
         fields = "__all__"
 
+    class Media:
+        js = ("core/js/decimal_input.js",)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         if self.instance.pk:
-            self.initial["importe"] = format_decimal_2(self.instance.importe)
+            self.initial["importe"] = self.instance.importe
 
             if self.instance.base_imponible.identificador == "detracciones":
                 self.fields["importe"].widget.attrs["data_sugerencias"] = (

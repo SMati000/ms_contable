@@ -8,6 +8,10 @@ document.addEventListener("DOMContentLoaded", function () {
         'input[name="bases_imponibles"]'
     );
 
+    if (!tipo || !autoSeleccionar) {
+        return;
+    }
+
     const basesPorTipo = {
         remunerativo: ["2", "3", "4", "5", "6", "9", "10"],
         no_remunerativo: ["5", "9", "10"],

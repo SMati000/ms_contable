@@ -1,5 +1,5 @@
 from django import forms
-from concepto.models import Concepto
+from concepto.models import VersionConcepto
 from core.forms import DecimalInputField
 from .models import DetallePlantillaLiquidacion
 
@@ -38,21 +38,11 @@ class DetallePlantillaLiquidacionForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields["concepto"].disabled = True
 
-            concepto = Concepto.objects.get(pk=self.instance.concepto.id).versiones.ultima()
+            concepto = (
+                VersionConcepto.todos
+                .filter(concepto_id=self.instance.concepto_id)
+                .ultima()
+            )
 
-            if concepto.codigo_arca:
+            if concepto and concepto.codigo_arca:
                 self.fields["debito_credito"].required = True
-
-    def clean_debito_credito(self):
-        concepto_form = self.cleaned_data["concepto"]
-        debito_credito = self.cleaned_data["debito_credito"]
-
-        if concepto_form:
-            concepto = Concepto.objects.get(pk=concepto_form.id).versiones.ultima()
-
-            if concepto.codigo_arca and not debito_credito:
-                raise forms.ValidationError(
-                    "Este campo es obligatorio para conceptos que tienen asociado un código de ARCA."
-                )
-
-        return debito_credito

@@ -1,9 +1,10 @@
 from django.db import models
+from core.models import ValidatingModel
 from core.validators import validar_cuit
 from empresa.choices import TipoEmpleador
 
 
-class Empresa(models.Model):
+class Empresa(ValidatingModel):
     id = models.BigAutoField(primary_key=True)
 
     cuit = models.CharField(

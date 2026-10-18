@@ -111,7 +111,6 @@ def crear_version_concepto(
         grupo=grupo,
     )
 
-    version.full_clean()
     version.save()
 
     version.bases_imponibles.set(bases_imponibles)
