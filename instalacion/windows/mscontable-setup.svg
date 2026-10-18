@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <image href="../../static/images/logo-160.svg" width="160" height="160"/>
+  <circle cx="131" cy="131" r="25" fill="#000000" opacity=".22"/>
+  <circle cx="129" cy="129" r="25" fill="#ffffff" stroke="#194b7e" stroke-width="2.5"/>
+  <path d="M129 119v15m-7-6 7 7 7-7m-14 8v5h28v-5"
+        fill="none" stroke="#194b7e" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

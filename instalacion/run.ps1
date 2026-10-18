@@ -159,58 +159,6 @@ function Get-AppPort {
     return ($line -split '=', 2)[1].Trim()
 }
 
-function Initialize-Superuser {
-    Write-Host ""
-    Write-Host "Inicializacion del usuario administrador"
-    Write-Host ""
-
-    $username = Read-Host "Usuario administrador"
-
-    if ([string]::IsNullOrWhiteSpace($username)) {
-        throw "El usuario no puede estar vacio."
-    }
-
-    $password = Read-Host "Password" -AsSecureString
-    $passwordConfirmation = Read-Host "Confirmar password" -AsSecureString
-
-    $passwordText = [System.Net.NetworkCredential]::new("", $password).Password
-    $confirmationText = [System.Net.NetworkCredential]::new("", $passwordConfirmation).Password
-
-    if ($passwordText -ne $confirmationText) {
-        throw "Las passwords no coinciden."
-    }
-
-    if ([string]::IsNullOrEmpty($passwordText)) {
-        throw "La password no puede estar vacia."
-    }
-
-    Write-Host ""
-    Write-Host "Creando superusuario..."
-
-    $env:DJANGO_SUPERUSER_USERNAME = $username
-    $env:DJANGO_SUPERUSER_PASSWORD = $passwordText
-    $env:DJANGO_SUPERUSER_EMAIL = "placeholder@email.com"
-
-    Invoke-Compose @(
-        "run",
-        "--rm",
-        "-e", "DJANGO_SUPERUSER_USERNAME",
-        "-e", "DJANGO_SUPERUSER_PASSWORD",
-        "-e", "DJANGO_SUPERUSER_EMAIL",
-        "ms_contable",
-        "python",
-        "manage.py",
-        "createsuperuser",
-        "--noinput"
-    )
-
-    Remove-Item Env:DJANGO_SUPERUSER_USERNAME -ErrorAction SilentlyContinue
-    Remove-Item Env:DJANGO_SUPERUSER_PASSWORD -ErrorAction SilentlyContinue
-    Remove-Item Env:DJANGO_SUPERUSER_EMAIL -ErrorAction SilentlyContinue
-
-    Write-Host "Superusuario creado." -ForegroundColor Green
-}
-
 function Install-App {
     Ensure-Directories
 
@@ -244,8 +192,6 @@ function Install-App {
         "migrate",
         "--noinput"
     )
-
-    Initialize-Superuser
 
     Write-Host ""
     Write-Host "Iniciando aplicacion..."

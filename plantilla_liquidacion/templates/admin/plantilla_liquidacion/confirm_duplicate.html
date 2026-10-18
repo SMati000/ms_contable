@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div id="content-main">
+    <p>¿Querés crear una copia de <strong>{{ original }}</strong>?</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="submit-row">
+            <input type="submit" value="Duplicar" class="default">
+            <a href="{{ cancel_url }}" class="closelink">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

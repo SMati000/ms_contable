@@ -1,0 +1,11 @@
+{
+	admin off
+	auto_https disable_redirects
+	skip_install_trust
+}
+
+https://mscontable {
+	bind 127.0.0.1 ::1
+	tls internal
+	reverse_proxy 127.0.0.1:8000
+}
