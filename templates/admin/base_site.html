@@ -8,6 +8,10 @@
 
 {% block extrahead %}
     {{ block.super }}
+    {% if show_test_devtools %}
+        <link rel="stylesheet" href="{% static 'css/test_devtools.css' %}">
+        <script defer src="{% static 'js/test_devtools.js' %}"></script>
+    {% endif %}
     <script src="{% static 'js/admin_theme.js' %}"></script>
     <script defer src="{% static 'js/admin_login.js' %}"></script>
     <link rel="icon" href="{% static 'images/favicon.ico' %}">
@@ -44,4 +48,61 @@
 
     </div>
 </div>
+{% if show_test_devtools %}
+    <form id="test-devtools-csrf" hidden>{% csrf_token %}</form>
+    <div
+        id="test-devtools"
+        data-status-url="{% url 'test_devtools_action' action='status' %}"
+    >
+        <button
+            class="test-devtools-trigger"
+            type="button"
+            aria-controls="test-devtools-panel"
+            aria-expanded="false"
+        >
+            Herramientas de test
+        </button>
+        <section
+            id="test-devtools-panel"
+            class="test-devtools-panel"
+            aria-labelledby="test-devtools-title"
+            hidden
+        >
+            <header>
+                <div>
+                    <h2 id="test-devtools-title">Herramientas de test</h2>
+                    <p>Solo modifica <code>data/db_test.sqlite3</code>.</p>
+                </div>
+                <button type="button" class="test-devtools-close" aria-label="Cerrar menú">×</button>
+            </header>
+            <p class="test-devtools-message" role="status" aria-live="polite">
+                Consultando datos…
+            </p>
+            <details class="test-devtools-counts">
+                <summary>Ver cantidades actuales</summary>
+                <ul></ul>
+            </details>
+            <div class="test-devtools-actions">
+                <button
+                    type="button"
+                    data-action="replace"
+                    data-url="{% url 'test_devtools_action' action='replace' %}"
+                >Generar o reemplazar datos</button>
+                <button
+                    type="button"
+                    data-action="append"
+                    data-url="{% url 'test_devtools_action' action='append' %}"
+                >Agregar más datos</button>
+                <button
+                    type="button"
+                    class="test-devtools-danger"
+                    data-action="clear"
+                    data-url="{% url 'test_devtools_action' action='clear' %}"
+                >Borrar datos de negocio</button>
+                <button type="button" data-action="status">Actualizar cantidades</button>
+            </div>
+            <small>Se conservan la cuenta test y los catálogos fijos del sistema.</small>
+        </section>
+    </div>
+{% endif %}
 {% endblock %}
