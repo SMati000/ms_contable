@@ -1,4 +1,6 @@
 from django import forms
+from django.contrib.admin.forms import AdminAuthenticationForm
+from django.contrib.auth.forms import UserCreationForm
 from decimal import Decimal
 
 
@@ -26,3 +28,40 @@ class DecimalInputField(forms.DecimalField):
             decimals = decimals[:-1]
 
         return f"{integer}.{decimals}"
+
+
+class FirstAdminAccountForm(UserCreationForm):
+    remember_session = forms.BooleanField(
+        required=False,
+        label="Recordar sesión en este dispositivo",
+    )
+
+    class Meta(UserCreationForm.Meta):
+        fields = ("username",)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "Usuario"
+        self.fields["username"].help_text = ""
+        self.fields["username"].widget.attrs.update(
+            {"autofocus": True, "autocomplete": "username"}
+        )
+        self.fields["password1"].label = "Contraseña"
+        self.fields["password1"].help_text = (
+            "Usá al menos 8 caracteres y evitá una contraseña común o fácil de adivinar."
+        )
+        self.fields["password1"].widget.attrs.update(
+            {"autocomplete": "new-password"}
+        )
+        self.fields["password2"].label = "Confirmar contraseña"
+        self.fields["password2"].help_text = ""
+        self.fields["password2"].widget.attrs.update(
+            {"autocomplete": "new-password"}
+        )
+
+
+class RememberSessionAdminAuthenticationForm(AdminAuthenticationForm):
+    remember_session = forms.BooleanField(
+        required=False,
+        label="Recordar sesión en este dispositivo",
+    )

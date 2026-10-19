@@ -63,6 +63,11 @@ db.sqlite3-journal
 /staticfiles
 /data
 
+# Windows installer artifacts
+/instalacion/windows/build/
+/instalacion/windows/dist/
+/instalacion/windows/.tools/
+
 # Flask stuff:
 instance/
 .webassets-cache

@@ -1,0 +1,72 @@
+name: Instalador de Windows
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Preparar Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-windows.txt
+
+      - name: Instalar Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Instalar dependencias de Windows
+        run: python -m pip install -r requirements-windows.txt
+
+      - name: Comprobar sintaxis Python y configuración Django
+        run: |
+          python -m compileall -q ms_contable core base_imponible categoria_laboral concepto empleado empresa grupo_concepto liquidacion plantilla_liquidacion manage.py
+          python manage.py check
+
+      - name: Ejecutar tests de Django
+        run: python manage.py test --verbosity=2
+
+      - name: Validar sintaxis de PowerShell
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem instalacion/windows -Filter *.ps1 -File
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $details = $errors | ForEach-Object { "$($file.Name): $($_.Message)" }
+              throw ($details -join [Environment]::NewLine)
+            }
+          }
+
+      - name: Construir instalador
+        shell: pwsh
+        run: .\instalacion\windows\build.ps1 -PythonCommand (Get-Command python).Source
+
+      - name: Instalar y probar el paquete generado
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem instalacion/windows/dist/https -Filter MSContable-Setup-*.exe -File | Select-Object -First 1
+          if (-not $installer) { throw "No se generó el instalador." }
+          .\instalacion\windows\smoke-test.ps1 -SetupExe $installer.FullName
+
+      - name: Publicar el instalador generado
+        uses: actions/upload-artifact@v7
+        with:
+          name: MSContable-Setup-${{ github.sha }}
+          path: instalacion/windows/dist/https/MSContable-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 14
