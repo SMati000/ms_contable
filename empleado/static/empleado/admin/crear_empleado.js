@@ -21,9 +21,9 @@
         categoriaSelect.disabled = true;
 
         // URL relativa al change_form actual:
-        // /admin/app/empleado/add/   -> ../categorias-por-empresa/<id>/
-        // /admin/app/empleado/<pk>/change/ -> ../../categorias-por-empresa/<id>/
-        const base = window.location.pathname.includes("/add/")
+        // /admin/empleados/agregar/ -> ../categorias-por-empresa/<id>/
+        // /admin/empleados/<pk>/editar/ -> ../../categorias-por-empresa/<id>/
+        const base = window.location.pathname.includes("/agregar/")
             ? "../categorias-por-empresa/"
             : "../../categorias-por-empresa/";
 

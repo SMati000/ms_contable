@@ -11,6 +11,7 @@ from ..forms import LiquidacionEmpleadoInlineForm, LiquidacionEmpleadoInlineForm
 from ..models import LiquidacionEmpleado
 from ..models.m_liquidacion import Liquidacion
 from ..services.TxtLsdArca import LsdTxtArcaService
+from ..lsd.exceptions import ErroresGeneracionLsd
 
 
 class LiquidacionEmpleadoInline(admin.TabularInline):
@@ -201,7 +202,30 @@ class LiquidacionAdmin(admin.ModelAdmin):
         if obj is None:
             raise Http404
 
-        txt = LsdTxtArcaService(obj.id).generar()
+        try:
+            txt = LsdTxtArcaService(obj.id).generar()
+        except ErroresGeneracionLsd as error:
+            self.message_user(
+                request,
+                "No se pudo generar el TXT LSD.",
+                messages.ERROR,
+            )
+            for detalle in error.errores:
+                self.message_user(request, detalle, messages.ERROR)
+            return redirect(
+                reverse("admin:liquidacion_liquidacion_change", args=[obj.pk])
+            )
+        except Exception:
+            self.message_user(
+                request,
+                "Ocurrió un error inesperado al generar el TXT LSD. "
+                "La liquidación no fue cerrada; revisá los datos e intentá nuevamente.",
+                messages.ERROR,
+            )
+            return redirect(
+                reverse("admin:liquidacion_liquidacion_change", args=[obj.pk])
+            )
+
         obj.cerrar()
 
         response = HttpResponse(

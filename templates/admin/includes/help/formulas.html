@@ -1,0 +1,29 @@
+<section class="help-dialog__section">
+    <h3>Fórmulas</h3>
+    <p>
+        Una fórmula puede combinar números, operadores y referencias a otros conceptos de la liquidación.
+        También puede escribirse en varias líneas.
+    </p>
+    <p>Usá un punto para separar los decimales, por ejemplo <code>10.23</code>.</p>
+    <p>Si dejás el cursor sobre una unidad, se muestra su descripción.</p>
+
+    <h4>Operadores disponibles</h4>
+    <ul class="help-dialog__operator-list">
+        <li><code>+</code> suma</li>
+        <li><code>-</code> resta</li>
+        <li><code>*</code> multiplicación</li>
+        <li><code>/</code> división</li>
+        <li><code>**</code> potencia</li>
+        <li><code>()</code> paréntesis</li>
+    </ul>
+</section>
+
+<section class="help-dialog__section">
+    <h3>Referenciar conceptos y bases imponibles</h3>
+    <p>
+        Cada detalle y cada base imponible tiene un identificador visible que podés usar en una fórmula.
+        Por ejemplo, para tomar el 11 % de <code>sueldo_basico_17</code>:
+    </p>
+    <pre><code>sueldo_basico_17 * 0.11</code></pre>
+    <p>La referencia toma el valor de <strong>Importe</strong> del detalle.</p>
+</section>

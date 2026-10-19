@@ -124,7 +124,7 @@ class Liquidacion(models.Model):
                 "Esta liquidación no se puede modificar."
             )
 
-        if self.periodo.day != 1:
+        if self.periodo and self.periodo.day != 1:
             raise ValidationError(
                 "El periodo de liquidacion debe comenzar en el primer dia del rango."
             )

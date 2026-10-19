@@ -4,3 +4,23 @@
     border-color: var(--border-color) !important;
     cursor: not-allowed;
 }
+
+#content-main form .submit-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: fit-content;
+    max-width: 100%;
+    margin: 1.5rem 0 0 auto;
+    padding: 12px 14px;
+    overflow: visible;
+    background: var(--body-bg);
+    border: 1px solid var(--hairline-color);
+    border-radius: 4px;
+}

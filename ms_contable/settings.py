@@ -1,29 +1,35 @@
 import os
 from pathlib import Path
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 APP_NAME = "MS Contable"
-APP_VERSION = "0.1.1"
+DEFAULT_APP_VERSION = "0.1.1"
+APP_VERSION = os.environ.get("APP_VERSION", "").strip()
+if not APP_VERSION or APP_VERSION.lower() == "latest":
+    APP_VERSION = DEFAULT_APP_VERSION
 
 DEVELOPER = "Schulz, Matias"
+DEVELOPER_URL = "https://github.com/SMati000/ms_contable"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-!lwd(zr!xl^=&=cbnv$rcd9g2!8o6tv+#u^*2k8ypsh15f(4$u"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured("La variable de entorno DJANGO_SECRET_KEY es obligatoria.")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get("DJANGO_DEBUG", "").lower() in {"1", "true", "yes"}
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 # Application definition
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    "ms_contable.admin_site.MSContableAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -87,6 +93,8 @@ DATABASES = {
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+
+LOGOUT_REDIRECT_URL = "admin:login"
 
 AUTH_PASSWORD_VALIDATORS = [
     {

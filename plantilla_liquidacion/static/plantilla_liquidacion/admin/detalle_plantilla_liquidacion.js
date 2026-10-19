@@ -37,7 +37,7 @@
             return;
         }
 
-        const base = window.location.pathname.includes("/add/")
+        const base = window.location.pathname.includes("/agregar/")
             ? "../concepto-detalles/"
             : "../../concepto-detalles/";
 
@@ -100,20 +100,5 @@
             "#detalles-group .field-formula_base textarea"
         ).forEach(ajustarAlturaTextarea);
 
-        const dialogo = document.getElementById("modal-ayuda-liquidacion");
-        const abrirAyuda = document.getElementById("abrir-ayuda");
-        const cerrarAyuda = document.getElementById("cerrar-ayuda");
-
-        if (dialogo && abrirAyuda) {
-            abrirAyuda.addEventListener("click", function () {
-                dialogo.showModal();
-            });
-        }
-
-        if (dialogo && cerrarAyuda) {
-            cerrarAyuda.addEventListener("click", function () {
-                dialogo.close();
-            });
-        }
     });
 })();

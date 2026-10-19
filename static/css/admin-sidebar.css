@@ -1,0 +1,117 @@
+:root {
+    --admin-sidebar-width: 275px;
+}
+
+#nav-sidebar {
+    position: fixed;
+    top: 50vh;
+    top: 50dvh;
+    left: 23px;
+    box-sizing: border-box;
+    width: var(--admin-sidebar-width);
+    padding-inline: 4px;
+    max-height: calc(100vh - 116px);
+    max-height: calc(100dvh - 116px);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(-50%);
+}
+
+#nav-sidebar-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--body-quiet-color) 45%, transparent) transparent;
+}
+
+#nav-sidebar-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#nav-sidebar-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#nav-sidebar-content::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-color: var(--body-quiet-color);
+    background-clip: padding-box;
+}
+
+#nav-sidebar-content::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in srgb, var(--body-quiet-color) 70%, transparent);
+}
+
+#nav-sidebar-content::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+#nav-sidebar #nav-filter:focus {
+    border-color: var(--link-fg);
+    outline: 1px solid var(--link-fg);
+    outline-offset: -1px;
+}
+
+#nav-sidebar #nav-filter {
+    flex: 0 0 auto;
+    min-height: 30px;
+    margin-bottom: 12px;
+}
+
+#nav-sidebar .module caption,
+#nav-sidebar:focus-within .module caption {
+    font-weight: 400;
+}
+
+#nav-sidebar .nav-filter-empty {
+    position: absolute;
+    inset: 50% 4px auto;
+    transform: translateY(-50%);
+    color: var(--body-quiet-color);
+    text-align: center;
+    pointer-events: none;
+}
+
+#main::before {
+    content: "";
+    flex: 0 0 23px;
+}
+
+#main.shifted::before {
+    flex-basis: calc(23px + var(--admin-sidebar-width));
+}
+
+#toggle-nav-sidebar {
+    position: fixed;
+    inset-inline-start: 0;
+    box-sizing: border-box;
+    width: 23px;
+}
+
+[dir="rtl"] #nav-sidebar {
+    right: 23px;
+    left: auto;
+}
+
+.main.shifted > #toggle-nav-sidebar {
+    margin-inline-end: 0;
+}
+
+.main.shifted > #nav-sidebar + .content {
+    max-width: 100%;
+}
+
+@media (max-width: 767px) {
+    #main::before {
+        display: none;
+    }
+}

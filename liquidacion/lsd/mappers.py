@@ -7,6 +7,11 @@ from liquidacion.lsd.registro05 import DatosRegistro05
 from liquidacion.lsd.registro06 import DatosRegistro06
 from liquidacion.models import Liquidacion
 
+
+IDENTIFICADORES_BASES_LSD = tuple(
+    [f"remuneracion_{numero}" for numero in range(1, 11)] + ["detracciones"]
+)
+
 """
 Consideraciones generales:
 - Los campos definidos como alfanuméricos deben informarse con espacios a la derecha hasta completar la longitud indicada
@@ -69,7 +74,7 @@ class Registro03Mapper:
                     registros[key] = Registro03Mapper._crear_registro(le, detalle)
                     continue
 
-                Registro03Mapper._validar_compatibilidad(registro, detalle)
+                Registro03Mapper._validar_compatibilidad(registro, le, detalle)
                 registro.importe += detalle.importe
 
         return list(registros.values())
@@ -89,6 +94,7 @@ class Registro03Mapper:
     @staticmethod
     def _validar_compatibilidad(
         registro: DatosRegistro03,
+        le: LiquidacionEmpleado,
         detalle,
     ) -> None:
         if (
@@ -97,7 +103,11 @@ class Registro03Mapper:
             or registro.debito_credito != detalle.debito_credito
             or registro.periodo_ajuste_retractivo != detalle.periodo_ajuste_retroactivo
         ):
-            raise ValueError("Los detalles con el mismo código ARCA deben tener los mismos datos excepto el importe.")
+            raise ValueError(
+                f"El empleado con CUIL {le.empleado.cuil} tiene más de un detalle "
+                f"para el concepto ARCA {detalle.concepto.codigo_arca} con datos "
+                "incompatibles; solo puede variar el importe."
+            )
 
 
 class Registro04Mapper:
@@ -112,6 +122,17 @@ class Registro04Mapper:
                 resultado.base_imponible.identificador: resultado.importe
                 for resultado in le.resultados_bases_imponibles.all()
             }
+            bases_faltantes = [
+                identificador
+                for identificador in IDENTIFICADORES_BASES_LSD
+                if identificador not in bases
+            ]
+            if bases_faltantes:
+                raise ValueError(
+                    f"El empleado con CUIL {le.empleado.cuil} no tiene resultados "
+                    "para las siguientes bases imponibles requeridas: "
+                    f"{', '.join(bases_faltantes)}."
+                )
 
             tramos = list(le.situaciones_revista.order_by("dia_inicio"))
 

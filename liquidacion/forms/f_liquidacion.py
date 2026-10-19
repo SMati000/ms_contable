@@ -11,7 +11,9 @@ class LiquidacionForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        empresa = cleaned_data.get("empresa") or self.instance.empresa
+        empresa = cleaned_data.get("empresa")
+        if empresa is None and self.instance.pk:
+            empresa = self.instance.empresa
         periodo = cleaned_data.get("periodo")
         numero = cleaned_data.get("numero")
 

@@ -13,9 +13,11 @@
 3. Abrir la terminal en la carpeta `instalacion`.
 4. Ejecutar el archivo `run.ps1` o `run.sh` segun corresponda
 5. Seleccionar la opción **3. Instalar**.
-6. Ingresar el usuario y contraseña del administrador cuando sean solicitados.
+6. Abrir MS Contable en el navegador y crear la primera cuenta administradora.
 
-El instalador descargará automáticamente la versión indicada en el archivo `.env`, ejecutará las migraciones de la base de datos y pondrá en funcionamiento la aplicación.
+El instalador descargará automáticamente la versión indicada en el archivo `.env`, ejecutará las migraciones de la base de datos y pondrá en funcionamiento la aplicación. En el primer inicio, la pantalla de bienvenida te permitirá crear la cuenta para ingresar.
+
+En el primer inicio, el instalador genera una clave secreta aleatoria y la guarda en `.env`. Conservá ese archivo en privado: la clave no debe compartirse ni publicarse.
 
 Una vez finalizada la instalación, acceder desde el navegador a:
 

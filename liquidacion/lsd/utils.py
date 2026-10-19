@@ -2,12 +2,35 @@ from dataclasses import fields
 import typing
 
 
+ETIQUETAS_CAMPOS_LSD = {
+    "cuit_empleador": "CUIT del empleador",
+    "cuil_trabajador": "CUIL del trabajador",
+    "periodo_liquidacion": "período de liquidación",
+    "cantidad_trabajadores": "cantidad de trabajadores",
+    "fecha_pago": "fecha de pago",
+    "forma_pago": "forma de pago",
+    "codigo_situacion_revista": "código de situación de revista",
+    "codigo_condicion": "código de condición",
+    "codigo_actividad": "código de actividad",
+    "codigo_modalidad_contratacion": "código de modalidad de contratación",
+    "codigo_siniestrado": "código de siniestrado",
+    "codigo_localidad": "código de localidad",
+    "codigo_obra_social": "código de obra social",
+    "remuneracion_bruta": "remuneración bruta",
+}
+
+
 def validar_datos_obligatorios_dataclass(datos):
     obligatorios_faltantes = datos_obligatorios_faltantes_dataclass(datos)
 
     if obligatorios_faltantes:
-        raise Exception(  # TODO - definir mejor el tipo de excepcion
-            "Falta definir datos que son obligatorios."
+        registro = getattr(datos, "TIPO_REGISTRO", "")
+        campos = ", ".join(
+            ETIQUETAS_CAMPOS_LSD.get(campo, campo.replace("_", " "))
+            for campo in obligatorios_faltantes
+        )
+        raise ValueError(
+            f"Faltan datos obligatorios del registro {registro}: {campos}."
         )
 
 

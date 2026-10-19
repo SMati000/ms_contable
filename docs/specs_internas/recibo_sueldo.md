@@ -1,6 +1,6 @@
 # Contrato de datos del recibo de sueldo
 
-Este documento define la estructura de datos que utiliza la plantilla HTML del recibo de sueldo.
+Este documento define la estructura de datos utilizada para generar el recibo de sueldo en SVG.
 
 El objeto de datos es generado por `ReciboSueldoService` a partir de una `LiquidacionEmpleado` correspondiente a una liquidación cerrada.
 
@@ -226,38 +226,30 @@ La separación es:
 
 ```text
 ReciboSueldoService
-        │
-        ├── obtiene datos históricos
-        ├── calcula estructura del recibo
-        │
-        └── detalle + remuneración bruta
-                    │
-                    ▼
-        GraficoCostoLaboralService
-                    │
-                    ▼
-              SVG del gráfico
-                    │
-                    ▼
-             plantilla HTML
-                    │
-                    ▼
-                   PDF
+  ├── obtiene datos históricos y prepara el recibo
+  └── detalle + remuneración bruta
+              │
+              ▼
+  GraficoCostoLaboralService ──► SVG del gráfico
+              │                         │
+              └─────────┬───────────────┘
+                        ▼
+            ReciboSueldoSvgRenderer
+                        │
+                        ▼
+                   recibo SVG
+                  ┌─────┴──────────────┐
+                  ▼                    ▼
+             visor HTML              CairoSVG
+        zoom, arrastre y lupa         svg2pdf
+          ├── imprimir                 │
+          ▼                            ▼
+     diálogo del navegador       descarga PDF vectorial
 ```
 
-La plantilla inserta el SVG directamente en el documento HTML:
+`ReciboSueldoSvgRenderer` genera el recibo vectorial a partir del contrato de datos. El HTML lo muestra en un visor con zoom, desplazamiento, lupa y controles para imprimir o descargar el PDF. La descarga directa convierte el SVG a PDF con `CairoSVG.svg2pdf`; Pillow no interviene y el contenido gráfico conserva su representación vectorial. El botón de impresión usa el diálogo del navegador.
 
-```django
-{% if grafico_torta_svg %}
-    <div class="grafico-torta">
-        {{ grafico_torta_svg|safe }}
-    </div>
-{% else %}
-    <div class="grafico-torta vacio">
-        No disponible
-    </div>
-{% endif %}
-```
+Los elementos de datos del SVG incluyen el atributo `data-variable` y un título emergente para identificar qué valor del contrato se representa.
 
 El SVG se considera contenido confiable porque es generado internamente por el sistema y no proviene directamente de datos ingresados por el usuario.
 
@@ -289,9 +281,9 @@ El campo puede estar vacío.
 
 ## Criterio de generación
 
-El contrato de datos tiene como objetivo desacoplar la plantilla HTML de los modelos de dominio.
+El contrato de datos tiene como objetivo desacoplar la presentación del recibo de los modelos de dominio.
 
-La plantilla:
+El servicio de presentación:
 
 * no realiza cálculos de liquidación;
 * no consulta la base de datos;
@@ -302,4 +294,4 @@ La plantilla:
 
 Estas responsabilidades corresponden a los servicios de aplicación.
 
-De esta manera, la plantilla recibe información preparada específicamente para su presentación y puede utilizarse tanto para generar una vista HTML como para generar el PDF del recibo.
+`ReciboSueldoSvgRenderer` recibe la información preparada y genera el SVG. La página HTML presenta el SVG y ofrece impresión desde el navegador o conversión directa a PDF mediante CairoSVG.

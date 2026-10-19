@@ -1,4 +1,18 @@
 document.addEventListener("DOMContentLoaded", function () {
+    const empresaSelect = document.getElementById("id_empresa");
+
+    if (empresaSelect) {
+        const actualizarTooltipEmpresa = function () {
+            const empresaSeleccionada = empresaSelect.selectedOptions[0];
+            empresaSelect.title = empresaSeleccionada
+                ? empresaSeleccionada.textContent.trim().replace(/\s+/g, " ")
+                : "";
+        };
+
+        actualizarTooltipEmpresa();
+        empresaSelect.addEventListener("change", actualizarTooltipEmpresa);
+    }
+
     const button = document.getElementById("btn-generar-txt");
 
     if (!button) {
